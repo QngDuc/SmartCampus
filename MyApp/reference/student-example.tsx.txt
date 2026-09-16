@@ -1,0 +1,40 @@
+import {View,Text,Image,Pressable,ScrollView, StyleSheet} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+
+interface Student {
+    name: string;
+    mssv: number;
+    lop: string;
+}
+
+function TTSV(props: Student){
+  return(
+    <View style = {styles.container}>
+      <Text style={{fontSize: 20, fontWeight: 'bold', color: 'black'}}>Thong tin sinh vien</Text>
+      <Text style={{fontSize: 16, color: 'gray'}}>Họ và tên: {props.name}</Text>
+      <Text style={{fontSize: 16, color: 'gray'}}>MSSV: {props.mssv}</Text>
+      <Text style={{fontSize: 16, color: 'gray'}}>Lớp: {props.lop}</Text>
+    </View>
+  );
+}
+
+
+export default function MyApp() {
+    return(
+    <View style = {styles.container}> 
+       <TTSV name="Nguyễn Văn A" mssv={123456789} lop="CNTT K62" />
+       <TTSV name="Nguyễn Văn B" mssv={987654321} lop="CNTT K62" />
+       <TTSV name="Trần Thị C" mssv={456789123} lop="CNTT K62" />
+    </View>
+    )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+}); 
