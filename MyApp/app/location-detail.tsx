@@ -1,11 +1,12 @@
 import { Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen, Button } from '@/components/campus-ui';
 import { colors, s } from '@/constants/campus';
 import { locations } from '@/data/mockData';
 
-import { showAlert } from '@/utils/feedback';
+import { approximateLocationIds, getDirectionsDestination } from '@/data/campusMap';
+import { openDirections } from '@/utils/directions';
 
 export default function LocationDetailScreen() {
   // id được truyền từ card địa điểm; params trên đường dẫn là chuỗi.
@@ -18,9 +19,9 @@ export default function LocationDetailScreen() {
     <Text style={s.badge}>{location.category}</Text>
     <View style={s.card}><Text style={s.heading}>Giờ hoạt động</Text><Text style={s.text}>{location.hours}</Text><Text style={s.muted}>Giờ hoạt động tham khảo</Text></View>
     <Text style={s.heading}>Về địa điểm</Text><Text style={s.text}>{location.description}</Text>
-    {/* Sau này tích hợp GPS và bản đồ tại đây */}
-    <Button title="Xem trên bản đồ" onPress={() => showAlert('Mô phỏng bản đồ', 'Đang hiển thị địa điểm trên bản đồ.')} />
-    <Button title="Chỉ đường" secondary onPress={() => showAlert('Chỉ đường', 'Chức năng chỉ đường sẽ được tích hợp sau.')} />
+    <Button title="Xem trên bản đồ" onPress={() => router.push({ pathname: '/(tabs)/map', params: { locationId: String(location.id) } })} />
+    {approximateLocationIds.has(location.id) && <Text style={s.muted}>Ghim trên bản đồ được ước lượng từ sơ đồ trường. Khi dẫn đường, Google Maps sẽ tìm điểm đến theo tên; hãy kiểm tra kết quả trước khi đi.</Text>}
+    <Button title="Dẫn đường" secondary onPress={() => openDirections(getDirectionsDestination(location.id, location.name))} />
   </Screen>;
 }
 

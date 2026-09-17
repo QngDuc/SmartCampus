@@ -28,6 +28,14 @@
                  "plugins":  [
                                  "expo-router",
                                  [
+                                     "expo-location",
+                                     {
+                                         "locationWhenInUsePermission": "Cho phép SMART CAMPUS sử dụng vị trí để hiển thị bạn trên bản đồ trường.",
+                                         "locationAlwaysPermission": false,
+                                         "locationAlwaysAndWhenInUsePermission": false
+                                     }
+                                 ],
+                                 [
                                      "expo-splash-screen",
                                      {
                                          "image":  "./assets/images/splash-icon.png",
