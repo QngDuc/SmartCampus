@@ -26,7 +26,15 @@ export const notifications = [
   { id: 2, title: 'Sắp đến giờ học', content: 'Môn Cơ sở dữ liệu bắt đầu lúc 09:45', time: '30 phút trước', isRead: false },
   { id: 3, title: 'Sự kiện mới', content: 'Ngày hội Công nghệ sẽ diễn ra vào cuối tuần', time: '2 giờ trước', isRead: true },
 ];
-export const days = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+export const days = [
+  'Thứ 2',
+  'Thứ 3',
+  'Thứ 4',
+  'Thứ 5',
+  'Thứ 6',
+  'Thứ 7',
+  'CN',
+];
 export const schedules = [
   { id: 1, subject: 'Lập trình React Native', room: 'A101', time: '07:30 - 09:30', day: 'Thứ 2' },
   { id: 2, subject: 'Cơ sở dữ liệu', room: 'B203', time: '09:45 - 11:45', day: 'Thứ 2' },
