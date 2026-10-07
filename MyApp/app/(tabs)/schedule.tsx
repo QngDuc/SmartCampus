@@ -55,6 +55,13 @@ function normalizeSearchText(value: string) {
     .replace(/đ/g, 'd');
 }
 
+const gradeColors = [
+  { tint: '#F3E8FF', border: '#D8B4FE', accent: '#7E22CE', chip: '#FAF5FF' },
+  { tint: '#CCFBF1', border: '#99F6E4', accent: '#0F766E', chip: '#F0FDFA' },
+  { tint: '#FFEDD5', border: '#FED7AA', accent: '#C2410C', chip: '#FFF7ED' },
+  { tint: '#DBEAFE', border: '#BFDBFE', accent: '#1D4ED8', chip: '#EFF6FF' },
+];
+
 // Chuyển dạng 28/09/2026 thành Date của JavaScript
 function parseVietnamDate(value: string) {
   const [day, month, year] = value
@@ -435,16 +442,30 @@ export default function ScheduleScreen() {
 
       {mode === 'grades' && grades && (
         <View style={{ marginTop: 20, gap: 12 }}>
-          <View style={{ backgroundColor: '#172554', borderRadius: 16, padding: 16, gap: 8 }}>
-            <Text style={{ color: '#BFDBFE', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>KẾT QUẢ HỌC TẬP</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>MSSV {grades.studentId}</Text>
-              <Text style={{ color: '#BFDBFE', fontSize: 12 }}>{grades.tables.reduce((count, table) => count + table.rows.length, 0)} học phần</Text>
+          <View style={{ backgroundColor: '#6D28D9', borderRadius: 20, padding: 18, gap: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#8B5CF6' }}>
+            <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, right: -28, top: -38, backgroundColor: '#A78BFA', opacity: 0.45 }} />
+            <View style={{ position: 'absolute', width: 72, height: 72, borderRadius: 36, right: 65, bottom: -45, backgroundColor: '#F0ABFC', opacity: 0.45 }} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ gap: 5 }}>
+                <Text style={{ color: '#E9D5FF', fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>BẢNG ĐIỂM CỦA BẠN</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 21, fontWeight: '800' }}>Học tập thật vui ✨</Text>
+              </View>
+              <Text style={{ fontSize: 28 }}>🎓</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 3 }}>
+              <View style={{ backgroundColor: '#FFFFFF24', borderRadius: 11, paddingHorizontal: 11, paddingVertical: 8 }}>
+                <Text style={{ color: '#E9D5FF', fontSize: 10, fontWeight: '700' }}>MÃ SINH VIÊN</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginTop: 2 }}>{grades.studentId}</Text>
+              </View>
+              <View style={{ backgroundColor: '#FFFFFF24', borderRadius: 11, paddingHorizontal: 11, paddingVertical: 8 }}>
+                <Text style={{ color: '#E9D5FF', fontSize: 10, fontWeight: '700' }}>HỌC PHẦN</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginTop: 2 }}>{grades.tables.reduce((count, table) => count + table.rows.length, 0)} môn</Text>
+              </View>
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 12, minHeight: 46 }}>
-            <Text style={{ color: '#64748B', fontSize: 17, marginRight: 8 }}>⌕</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5, borderColor: '#C4B5FD', paddingHorizontal: 12, minHeight: 48, shadowColor: '#7C3AED', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 }}>
+            <Text style={{ fontSize: 17, marginRight: 8 }}>🔎</Text>
             <TextInput
               value={gradeSearch}
               onChangeText={setGradeSearch}
@@ -453,15 +474,20 @@ export default function ScheduleScreen() {
               returnKeyType="search"
               style={{ flex: 1, paddingVertical: 10, color: '#0F172A', fontSize: 14 }}
             />
-            {!!gradeSearch && <Pressable accessibilityRole="button" accessibilityLabel="Xóa tìm kiếm" onPress={() => setGradeSearch('')}><Text style={{ color: '#2563EB', fontWeight: '600' }}>Xóa</Text></Pressable>}
+            {!!gradeSearch && <Pressable accessibilityRole="button" accessibilityLabel="Xóa tìm kiếm" onPress={() => setGradeSearch('')} style={{ backgroundColor: '#F3E8FF', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5 }}><Text style={{ color: '#7E22CE', fontWeight: '700', fontSize: 12 }}>Xóa</Text></Pressable>}
           </View>
 
           {matchingGradeRows.map(({ table, tableIndex, row, rowIndex, courseIndex, scoreIndex }) => (
-            <View key={`${tableIndex}-${rowIndex}`} style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, gap: 10 }}>
+            <View key={`${tableIndex}-${rowIndex}`} style={{ backgroundColor: gradeColors[rowIndex % gradeColors.length].chip, borderRadius: 16, borderWidth: 1.5, borderColor: gradeColors[rowIndex % gradeColors.length].border, padding: 13, gap: 10, shadowColor: gradeColors[rowIndex % gradeColors.length].accent, shadowOpacity: 0.08, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                <Text style={{ color: '#0F172A', fontSize: 15, lineHeight: 21, fontWeight: '700', flex: 1 }}>{row[courseIndex >= 0 ? courseIndex : 0] || table.title || 'Học phần'}</Text>
-                {scoreIndex >= 0 && !!row[scoreIndex] && <View style={{ backgroundColor: '#EFF6FF', borderRadius: 9, paddingHorizontal: 10, paddingVertical: 6 }}>
-                  <Text style={{ color: '#1D4ED8', fontSize: 13, fontWeight: '800' }}>{row[scoreIndex]}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 11, backgroundColor: gradeColors[rowIndex % gradeColors.length].tint, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17 }}>🌼</Text>
+                  </View>
+                  <Text style={{ color: '#0F172A', fontSize: 14, lineHeight: 20, fontWeight: '800', flex: 1 }}>{row[courseIndex >= 0 ? courseIndex : 0] || table.title || 'Học phần'}</Text>
+                </View>
+                {scoreIndex >= 0 && !!row[scoreIndex] && <View style={{ backgroundColor: gradeColors[rowIndex % gradeColors.length].accent, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 7 }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900' }}>★ {row[scoreIndex]}</Text>
                 </View>}
               </View>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -469,7 +495,7 @@ export default function ScheduleScreen() {
                   if (!cell) return null;
                   if (cellIndex === (courseIndex >= 0 ? courseIndex : 0) || cellIndex === scoreIndex) return null;
                   const header = table.headers[cellIndex];
-                  return <View key={`${rowIndex}-${cellIndex}`} style={{ backgroundColor: '#F8FAFC', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 6 }}>
+                  return <View key={`${rowIndex}-${cellIndex}`} style={{ backgroundColor: '#FFFFFFB8', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1, borderColor: gradeColors[rowIndex % gradeColors.length].border }}>
                     <Text style={{ color: '#64748B', fontSize: 11 }}>{header ? `${header}: ` : ''}<Text style={{ color: '#334155', fontWeight: '600' }}>{cell}</Text></Text>
                   </View>;
                 })}
