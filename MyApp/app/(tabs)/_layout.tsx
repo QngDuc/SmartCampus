@@ -12,7 +12,7 @@ export default function TabLayout() {
     <Tabs.Screen name="home" options={{ title: 'Trang chủ', tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} /> }} />
     <Tabs.Screen name="map" options={{ title: 'Bản đồ', tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" color={color} size={size} /> }} />
     <Tabs.Screen name="schedule" options={{ title: 'Lịch', tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color} size={size} /> }} />
-    <Tabs.Screen name="events" options={{ title: 'Sự kiện', tabBarIcon: ({ color, size }) => <Ionicons name="ticket-outline" color={color} size={size} /> }} />
+    <Tabs.Screen name="events" options={{ title: 'Thông báo', tabBarIcon: ({ color, size }) => <Ionicons name="megaphone-outline" color={color} size={size} /> }} />
     <Tabs.Screen name="profile" options={{ title: 'Cá nhân', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }} />
     <Tabs.Screen name="explore" options={{ href: null }} />
   </Tabs>;
