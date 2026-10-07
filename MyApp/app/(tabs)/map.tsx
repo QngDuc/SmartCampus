@@ -1,5 +1,3 @@
-import { Image } from "expo-image";
-import { locationImages } from "@/data/locationImages";
 import CampusMap from "@/components/campus-map";
 import { colors, s } from "@/constants/campus";
 import {
@@ -9,20 +7,22 @@ import {
   type Coordinate,
 } from "@/data/campusMap";
 import { canRoute, findCampusRoute, insideCampus } from "@/data/campusRouting";
+import { locationImages } from "@/data/locationImages";
 import { locations } from "@/data/mockData";
 import { showAlert } from "@/utils/feedback";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
-  useWindowDimensions,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -163,7 +163,14 @@ export default function MapScreen() {
       <View style={styles.mapArea}>
         <CampusMap
           center={center}
-          places={category === "Tất cả" ? places : places.filter(p => locations.find(l => l.id === p.id)?.category === category)}
+          places={
+            category === "Tất cả"
+              ? places
+              : places.filter(
+                  (p) =>
+                    locations.find((l) => l.id === p.id)?.category === category,
+                )
+          }
           selectedId={selectedId}
           userLocation={userLocation}
           onSelect={selectPlace}
@@ -199,40 +206,196 @@ export default function MapScreen() {
         </View>
       </View>
 
-      <View style={[styles.topBar, { left: wide && selected ? 424 : 16 }]} pointerEvents="box-none">
-        <Pressable accessibilityRole="button" accessibilityLabel="Tìm kiếm địa điểm trong trường" style={styles.searchBar} onPress={() => openPicker("destination")}>
+      <View
+        style={[styles.topBar, { left: wide && selected ? 424 : 16 }]}
+        pointerEvents="box-none"
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tìm kiếm địa điểm trong trường"
+          style={styles.searchBar}
+          onPress={() => openPicker("destination")}
+        >
           <Ionicons name="menu" size={23} color="#5F6368" />
-          <Text style={styles.fieldText} numberOfLines={1}>{selected?.name ?? "Tìm kiếm trong khuôn viên"}</Text>
+          <Text style={styles.fieldText} numberOfLines={1}>
+            {selected?.name ?? "Tìm kiếm trong khuôn viên"}
+          </Text>
           <Ionicons name="search" size={23} color="#5F6368" />
         </Pressable>
-        {wide && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 8, alignItems: "center" }}>
-          {["Tất cả", "Học tập", "Giảng đường", "Tiện ích", "Thể thao", "Cổng trường"].map(item => <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: category === item }} onPress={() => setCategory(item)} style={[styles.chip, category === item && styles.activeChip]}><Text style={{ color: category === item ? "#007C91" : "#3C4043", fontWeight: "600" }}>{item}</Text></Pressable>)}
-        </ScrollView>}
+        {wide && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ gap: 8, alignItems: "center" }}
+          >
+            {[
+              "Tất cả",
+              "Học tập",
+              "Giảng đường",
+              "Tiện ích",
+              "Thể thao",
+              "Cổng trường",
+            ].map((item) => (
+              <Pressable
+                key={item}
+                accessibilityRole="button"
+                accessibilityState={{ selected: category === item }}
+                onPress={() => setCategory(item)}
+                style={[styles.chip, category === item && styles.activeChip]}
+              >
+                <Text
+                  style={{
+                    color: category === item ? "#007C91" : "#3C4043",
+                    fontWeight: "600",
+                  }}
+                >
+                  {item}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
-      {selected && <View style={[styles.detailPanel, wide ? styles.desktopPanel : styles.mobilePanel]}>
-        <ScrollView key={selected.id} showsVerticalScrollIndicator={false}>
-          <View style={styles.hero}>
-            {locationImages[selected.id] ? <Image source={locationImages[selected.id]} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`Ảnh ${selected.name}`} /> : <View style={styles.photoPlaceholder}><Ionicons name="images-outline" size={44} color="#007C91" /><Text style={styles.photoCaption}>Chưa có ảnh địa điểm</Text></View>}
-            <Pressable accessibilityRole="button" accessibilityLabel="Đóng chi tiết địa điểm" style={styles.closeDetail} onPress={() => { setSelectedId(undefined); setShowRoute(false); router.setParams({ locationId: "", directions: "0" }); }}><Ionicons name="close" size={23} color="#3C4043" /></Pressable>
-          </View>
-          <View style={styles.detailBody}>
-            <Text style={styles.placeTitle}>{selected.name}</Text>
-            <Text style={styles.categoryText}>{selected.category} · Đại học Tây Nguyên</Text>
-          </View>
-          <View style={styles.overviewTab}><Text style={styles.overviewText}>Tổng quan</Text></View>
-          <View style={styles.actions}>
-            <Pressable accessibilityRole="button" disabled={!canRoute(selected.id)} style={styles.action} onPress={() => { setShowRoute(true); router.setParams({ directions: "1" }); }}><View style={[styles.actionCircle, { backgroundColor: canRoute(selected.id) ? "#007F92" : "#94A3B8" }]}><Ionicons name="navigate" size={23} color="white" /></View><Text style={styles.actionLabel}>Đường đi</Text></Pressable>
-            <Pressable accessibilityRole="button" style={styles.action} onPress={() => openPicker("origin")}><View style={styles.actionCircle}><Ionicons name="radio-button-on-outline" size={23} color="#007F92" /></View><Text style={styles.actionLabel}>Điểm xuất phát</Text></Pressable>
-            <Pressable accessibilityRole="button" style={styles.action} onPress={() => router.push({ pathname: "/location-detail", params: { id: String(selected.id) } })}><View style={styles.actionCircle}><Ionicons name="information-circle-outline" size={23} color="#007F92" /></View><Text style={styles.actionLabel}>Chi tiết</Text></Pressable>
-          </View>
-          <View style={styles.detailBody}>
-            <View style={styles.infoRow}><Ionicons name="location-outline" size={24} color="#008698" /><Text style={styles.infoText}>567 Lê Duẩn, Đắk Lắk</Text></View>
-            <View style={styles.infoRow}><Ionicons name="time-outline" size={24} color="#008698" /><View style={{ flex: 1 }}><Text style={styles.infoText}>{selected.hours}</Text><Text style={styles.categoryText}>Giờ hoạt động tham khảo</Text></View></View>
-            <View style={styles.infoRow}><Ionicons name="reader-outline" size={24} color="#008698" /><Text style={styles.infoText}>{selected.description}</Text></View>
-            {showRoute && <View style={styles.routeCard}><Text style={styles.routeTitle}>{route ? `${route.minutes} phút · ${route.meters} m` : "Chưa có tuyến đi bộ phù hợp"}</Text><Text style={styles.infoText}>{origin.name} → {selected.name}</Text><Text style={styles.notice}>Tuyến tham khảo theo sơ đồ, chưa khảo sát lối đi thực tế.</Text></View>}
-          </View>
-        </ScrollView>
-      </View>}
+      {selected && (
+        <View
+          style={[
+            styles.detailPanel,
+            wide ? styles.desktopPanel : styles.mobilePanel,
+          ]}
+        >
+          <ScrollView key={selected.id} showsVerticalScrollIndicator={false}>
+            <View style={styles.hero}>
+              {locationImages[selected.id] ? (
+                <Image
+                  source={locationImages[selected.id]}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  accessibilityLabel={`Ảnh ${selected.name}`}
+                />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="images-outline" size={44} color="#007C91" />
+                  <Text style={styles.photoCaption}>Chưa có ảnh địa điểm</Text>
+                </View>
+              )}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng chi tiết địa điểm"
+                style={styles.closeDetail}
+                onPress={() => {
+                  setSelectedId(undefined);
+                  setShowRoute(false);
+                  router.setParams({ locationId: "", directions: "0" });
+                }}
+              >
+                <Ionicons name="close" size={23} color="#3C4043" />
+              </Pressable>
+            </View>
+            <View style={styles.detailBody}>
+              <Text style={styles.placeTitle}>{selected.name}</Text>
+              <Text style={styles.categoryText}>
+                {selected.category} · Đại học Tây Nguyên
+              </Text>
+            </View>
+            <View style={styles.overviewTab}>
+              <Text style={styles.overviewText}>Tổng quan</Text>
+            </View>
+            <View style={styles.actions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!canRoute(selected.id)}
+                style={styles.action}
+                onPress={() => {
+                  setShowRoute(true);
+                  router.setParams({ directions: "1" });
+                }}
+              >
+                <View
+                  style={[
+                    styles.actionCircle,
+                    {
+                      backgroundColor: canRoute(selected.id)
+                        ? "#007F92"
+                        : "#94A3B8",
+                    },
+                  ]}
+                >
+                  <Ionicons name="navigate" size={23} color="white" />
+                </View>
+                <Text style={styles.actionLabel}>Đường đi</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.action}
+                onPress={() => openPicker("origin")}
+              >
+                <View style={styles.actionCircle}>
+                  <Ionicons
+                    name="radio-button-on-outline"
+                    size={23}
+                    color="#007F92"
+                  />
+                </View>
+                <Text style={styles.actionLabel}>Điểm xuất phát</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.action}
+                onPress={() =>
+                  router.push({
+                    pathname: "/location-detail",
+                    params: { id: String(selected.id) },
+                  })
+                }
+              >
+                <View style={styles.actionCircle}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={23}
+                    color="#007F92"
+                  />
+                </View>
+                <Text style={styles.actionLabel}>Chi tiết</Text>
+              </Pressable>
+            </View>
+            <View style={styles.detailBody}>
+              <View style={styles.infoRow}>
+                <Ionicons name="location-outline" size={24} color="#008698" />
+                <Text style={styles.infoText}>567 Lê Duẩn, Đắk Lắk</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="time-outline" size={24} color="#008698" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.infoText}>{selected.hours}</Text>
+                  <Text style={styles.categoryText}>
+                    Giờ hoạt động tham khảo
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name="reader-outline" size={24} color="#008698" />
+                <Text style={styles.infoText}>{selected.description}</Text>
+              </View>
+              {showRoute && (
+                <View style={styles.routeCard}>
+                  <Text style={styles.routeTitle}>
+                    {route
+                      ? `${route.minutes} phút · ${route.meters} m`
+                      : "Chưa có tuyến đi bộ phù hợp"}
+                  </Text>
+                  <Text style={styles.infoText}>
+                    {origin.name} → {selected.name}
+                  </Text>
+                  <Text style={styles.notice}>
+                    Tuyến tham khảo theo sơ đồ, chưa khảo sát lối đi thực tế.
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      )}
 
       <Modal
         visible={picker !== null}
@@ -309,29 +472,109 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  topBar: { position: "absolute", top: 16, right: 16, flexDirection: "row", gap: 16, zIndex: 20 },
-  searchBar: { width: 380, maxWidth: "100%", backgroundColor: "white", borderRadius: 32, padding: 17, flexDirection: "row", gap: 14, alignItems: "center", elevation: 5, boxShadow: "0px 2px 8px #0002" },
-  chip: { backgroundColor: "white", borderRadius: 24, paddingHorizontal: 18, paddingVertical: 13, borderWidth: 1, borderColor: "#DADCE0" },
+  topBar: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    flexDirection: "row",
+    gap: 16,
+    zIndex: 20,
+  },
+  searchBar: {
+    width: 380,
+    maxWidth: "100%",
+    backgroundColor: "white",
+    borderRadius: 32,
+    padding: 17,
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "center",
+    elevation: 5,
+    boxShadow: "0px 2px 8px #0002",
+  },
+  chip: {
+    backgroundColor: "white",
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: "#DADCE0",
+  },
   activeChip: { backgroundColor: "#D9F4F8", borderColor: "#007C91" },
-  detailPanel: { position: "absolute", backgroundColor: "white", overflow: "hidden", zIndex: 15, elevation: 6, boxShadow: "0px 4px 18px #0002" },
+  detailPanel: {
+    position: "absolute",
+    backgroundColor: "white",
+    overflow: "hidden",
+    zIndex: 15,
+    elevation: 6,
+    boxShadow: "0px 4px 18px #0002",
+  },
   desktopPanel: { top: 16, bottom: 16, left: 16, width: 392, borderRadius: 24 },
-  mobilePanel: { bottom: 0, left: 0, right: 0, maxHeight: "58%", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  mobilePanel: {
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: "58%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
   hero: { height: 200, backgroundColor: "#E5F3F0" },
-  photoPlaceholder: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  photoPlaceholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
   photoCaption: { color: "#457176", fontSize: 13 },
-  closeDetail: { position: "absolute", top: 12, right: 12, borderRadius: 22, backgroundColor: "white", padding: 9 },
+  closeDetail: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    borderRadius: 22,
+    backgroundColor: "white",
+    padding: 9,
+  },
   detailBody: { padding: 24, gap: 20 },
   placeTitle: { fontSize: 25, color: "#202124", fontWeight: "600" },
   categoryText: { color: "#70757A", fontSize: 13, marginTop: 4 },
-  overviewTab: { borderBottomWidth: 1, borderColor: "#DADCE0", alignItems: "center" },
-  overviewText: { color: "#008698", fontWeight: "600", fontSize: 15, padding: 15, borderBottomWidth: 3, borderColor: "#008698" },
-  actions: { flexDirection: "row", justifyContent: "space-around", paddingVertical: 18, borderBottomWidth: 1, borderColor: "#E8EAED" },
+  overviewTab: {
+    borderBottomWidth: 1,
+    borderColor: "#DADCE0",
+    alignItems: "center",
+  },
+  overviewText: {
+    color: "#008698",
+    fontWeight: "600",
+    fontSize: 15,
+    padding: 15,
+    borderBottomWidth: 3,
+    borderColor: "#008698",
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderColor: "#E8EAED",
+  },
   action: { alignItems: "center", gap: 9, flex: 1 },
-  actionCircle: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "#D1F6FF" },
+  actionCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#D1F6FF",
+  },
   actionLabel: { color: "#006577", fontSize: 12, textAlign: "center" },
   infoRow: { flexDirection: "row", gap: 18, alignItems: "flex-start" },
   infoText: { flexShrink: 1, fontSize: 14, lineHeight: 23, color: "#3C4043" },
-  routeCard: { backgroundColor: "#EDF8F8", padding: 16, borderRadius: 16, gap: 8 },
+  routeCard: {
+    backgroundColor: "#EDF8F8",
+    padding: 16,
+    borderRadius: 16,
+    gap: 8,
+  },
   routeTitle: { color: "#007C91", fontSize: 18, fontWeight: "700" },
   page: { flex: 1, backgroundColor: "#F8FAFC" },
   header: {
