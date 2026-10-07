@@ -47,6 +47,14 @@ type GradesResponse = {
   tables: GradeTable[];
 };
 
+function normalizeSearchText(value: string) {
+  return value
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+}
+
 // Chuyển dạng 28/09/2026 thành Date của JavaScript
 function parseVietnamDate(value: string) {
   const [day, month, year] = value
@@ -111,6 +119,7 @@ export default function ScheduleScreen() {
   const [gradesLoading, setGradesLoading] = useState(false);
   const [grades, setGrades] = useState<GradesResponse | null>(null);
   const [gradeError, setGradeError] = useState<string | null>(null);
+  const [gradeSearch, setGradeSearch] = useState('');
 
   // ==========================================
   // TÌM TUẦN HIỆN TẠI
@@ -150,6 +159,18 @@ export default function ScheduleScreen() {
     currentWeekSchedule.filter(
       item => item.day === selectedDay
     );
+
+  const filteredGradeTables = grades?.tables.map(table => ({
+    ...table,
+    rows: table.rows.filter(row =>
+      normalizeSearchText(row.join(' ')).includes(normalizeSearchText(gradeSearch.trim()))
+    ),
+  })) ?? [];
+  const matchingGradeRows = filteredGradeTables.flatMap((table, tableIndex) => {
+    const courseIndex = table.headers.findIndex(header => /học phần|môn học|tên môn|tên học phần/i.test(header));
+    const scoreIndex = table.headers.findIndex(header => /điểm|grade|score/i.test(header));
+    return table.rows.map((row, rowIndex) => ({ table, tableIndex, row, rowIndex, courseIndex, scoreIndex }));
+  });
 
   // ==========================================
   // TRA THỜI KHÓA BIỂU
@@ -233,6 +254,7 @@ export default function ScheduleScreen() {
     const msv = studentId.trim();
     setGrades(null);
     setGradeError(null);
+    setGradeSearch('');
 
     if (!/^\d{8}$/.test(msv)) {
       setGradeError('Mã sinh viên phải gồm 8 chữ số.');
@@ -405,48 +427,62 @@ export default function ScheduleScreen() {
 
 
       {mode === 'grades' && gradeError && (
-        <View style={[s.card, { marginTop: 20 }]}>
-          <Text style={s.text}>{gradeError}</Text>
+        <View style={[s.card, { marginTop: 20, backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
+          <Text style={{ color: '#C2410C', fontSize: 12, fontWeight: '700', letterSpacing: 1 }}>CHƯA THỂ TẢI ĐIỂM</Text>
+          <Text style={[s.text, { color: '#7C2D12' }]}>{gradeError}</Text>
         </View>
       )}
 
       {mode === 'grades' && grades && (
         <View style={{ marginTop: 20, gap: 12 }}>
-          <View style={s.card}>
-            <Text style={s.heading}>Kết quả học tập</Text>
-            <Text style={s.muted}>MSSV: {grades.studentId}</Text>
-            <Text style={s.muted}>Dữ liệu lấy trực tiếp từ website trường.</Text>
+          <View style={{ backgroundColor: '#172554', borderRadius: 16, padding: 16, gap: 8 }}>
+            <Text style={{ color: '#BFDBFE', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>KẾT QUẢ HỌC TẬP</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>MSSV {grades.studentId}</Text>
+              <Text style={{ color: '#BFDBFE', fontSize: 12 }}>{grades.tables.reduce((count, table) => count + table.rows.length, 0)} học phần</Text>
+            </View>
           </View>
 
-          {grades.tables.map((table, tableIndex) => (
-            <View key={`${table.title}-${tableIndex}`} style={s.card}>
-              {!!table.title && <Text style={s.heading}>{table.title}</Text>}
-              {table.headers.length > 0 && table.rows.length === 0 && (
-                <Text style={s.text}>{table.headers.join(' · ')}</Text>
-              )}
-              {table.rows.map((row, rowIndex) => (
-                <View
-                  key={`${tableIndex}-${rowIndex}`}
-                  style={{
-                    paddingVertical: 10,
-                    borderTopWidth: rowIndex === 0 ? 0 : 1,
-                    borderColor: '#E2E8F0',
-                  }}
-                >
-                  {row.map((cell, cellIndex) => {
-                    if (!cell) return null;
-                    const label = table.headers[cellIndex];
-                    return <Text
-                      key={`${rowIndex}-${cellIndex}`}
-                      style={cellIndex === 0 ? s.heading : s.text}
-                    >
-                      {label ? `${label}: ` : ''}{cell}
-                    </Text>;
-                  })}
-                </View>
-              ))}
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 12, minHeight: 46 }}>
+            <Text style={{ color: '#64748B', fontSize: 17, marginRight: 8 }}>⌕</Text>
+            <TextInput
+              value={gradeSearch}
+              onChangeText={setGradeSearch}
+              placeholder="Tìm học phần có điểm..."
+              placeholderTextColor="#94A3B8"
+              returnKeyType="search"
+              style={{ flex: 1, paddingVertical: 10, color: '#0F172A', fontSize: 14 }}
+            />
+            {!!gradeSearch && <Pressable accessibilityRole="button" accessibilityLabel="Xóa tìm kiếm" onPress={() => setGradeSearch('')}><Text style={{ color: '#2563EB', fontWeight: '600' }}>Xóa</Text></Pressable>}
+          </View>
+
+          {matchingGradeRows.map(({ table, tableIndex, row, rowIndex, courseIndex, scoreIndex }) => (
+            <View key={`${tableIndex}-${rowIndex}`} style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <Text style={{ color: '#0F172A', fontSize: 15, lineHeight: 21, fontWeight: '700', flex: 1 }}>{row[courseIndex >= 0 ? courseIndex : 0] || table.title || 'Học phần'}</Text>
+                {scoreIndex >= 0 && !!row[scoreIndex] && <View style={{ backgroundColor: '#EFF6FF', borderRadius: 9, paddingHorizontal: 10, paddingVertical: 6 }}>
+                  <Text style={{ color: '#1D4ED8', fontSize: 13, fontWeight: '800' }}>{row[scoreIndex]}</Text>
+                </View>}
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {row.map((cell, cellIndex) => {
+                  if (!cell) return null;
+                  if (cellIndex === (courseIndex >= 0 ? courseIndex : 0) || cellIndex === scoreIndex) return null;
+                  const header = table.headers[cellIndex];
+                  return <View key={`${rowIndex}-${cellIndex}`} style={{ backgroundColor: '#F8FAFC', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 6 }}>
+                    <Text style={{ color: '#64748B', fontSize: 11 }}>{header ? `${header}: ` : ''}<Text style={{ color: '#334155', fontWeight: '600' }}>{cell}</Text></Text>
+                  </View>;
+                })}
+              </View>
             </View>
           ))}
+
+          {filteredGradeTables.every(table => table.rows.length === 0) && (
+            <View style={[s.card, { alignItems: 'center', paddingVertical: 24 }]}>
+              <Text style={s.heading}>{gradeSearch ? 'Không tìm thấy học phần' : 'Chưa có dữ liệu điểm'}</Text>
+              <Text style={[s.muted, { textAlign: 'center' }]}>{gradeSearch ? 'Thử tìm bằng tên học phần hoặc một phần tên khác.' : 'Cổng thông tin trường chưa trả về bảng kết quả cho mã sinh viên này.'}</Text>
+            </View>
+          )}
         </View>
       )}
 
