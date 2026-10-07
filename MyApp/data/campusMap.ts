@@ -8,8 +8,8 @@ export type CampusMapConfig = {
 
 // Tâm khuôn viên: https://mapcarta.com/W241971731.
 export const campusMap: CampusMapConfig = {
-  name: 'Trường Đại học Tây Nguyên',
-  address: '567 Lê Duẩn, phường Ea Kao, Đắk Lắk',
+  name: "Nhà khách Đại Học Tây Nguyên",
+  address: "567 Lê Duẩn, phường Ea Kao, Đắk Lắk",
   center: { latitude: 12.65067, longitude: 108.02621 },
 };
 
@@ -19,10 +19,14 @@ const rearGate = { latitude: 12.64841486, longitude: 108.02800119 };
 
 // Số hóa sơ đồ ảnh 960x910 do người dùng cung cấp, neo ở hai cổng.
 // Đây chỉ là ước lượng vị trí khu nhà, KHÔNG dùng làm đích GPS chính xác.
-function fromDiagram(x: number, y: number): Coordinate {
+export function fromDiagram(x: number, y: number): Coordinate {
   return {
-    latitude: mainGate.latitude + (y - 335) / (740 - 335) * (rearGate.latitude - mainGate.latitude),
-    longitude: mainGate.longitude + (x - 150) / (680 - 150) * (rearGate.longitude - mainGate.longitude),
+    latitude:
+      mainGate.latitude +
+      ((y - 335) / (740 - 335)) * (rearGate.latitude - mainGate.latitude),
+    longitude:
+      mainGate.longitude +
+      ((x - 150) / (680 - 150)) * (rearGate.longitude - mainGate.longitude),
   };
 }
 
@@ -46,16 +50,26 @@ export const locationCoordinates: Partial<Record<number, Coordinate>> = {
 
 export const approximateLocationIds = new Set([1, 2, 3, 5, 6, 7, 8, 9, 12, 13]);
 
-export function getDirectionsDestination(id: number, name: string): Coordinate | string {
+export function getDirectionsDestination(
+  id: number,
+  name: string,
+): Coordinate | string {
   if (id === 100) return mainGate;
   const coordinate = locationCoordinates[id];
   if (coordinate && !approximateLocationIds.has(id)) return coordinate;
   return `${name}, Trường Đại học Tây Nguyên, 567 Lê Duẩn, Đắk Lắk`;
 }
 
-export const campusMapSource = 'https://mapcarta.com/W241971731';
+export const campusMapSource = "https://mapcarta.com/W241971731";
 
-export function isValidCoordinate(value: Coordinate | undefined | null): value is Coordinate {
-  return !!value && Number.isFinite(value.latitude) && Number.isFinite(value.longitude)
-    && Math.abs(value.latitude) <= 90 && Math.abs(value.longitude) <= 180;
+export function isValidCoordinate(
+  value: Coordinate | undefined | null,
+): value is Coordinate {
+  return (
+    !!value &&
+    Number.isFinite(value.latitude) &&
+    Number.isFinite(value.longitude) &&
+    Math.abs(value.latitude) <= 90 &&
+    Math.abs(value.longitude) <= 180
+  );
 }

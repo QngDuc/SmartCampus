@@ -1,4 +1,4 @@
-import type { Coordinate } from '@/data/campusMap';
+import type { Coordinate } from "@/data/campusMap";
 
 export type MapPlace = { id: number; name: string; coordinate: Coordinate };
 export type CampusMapProps = {
@@ -7,4 +7,5 @@ export type CampusMapProps = {
   selectedId?: number;
   userLocation: Coordinate | null;
   onSelect: (id: number) => void;
+  route?: Coordinate[];
 };

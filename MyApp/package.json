@@ -3,6 +3,10 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
+    "api": "node server/api.cjs",
+    "api:seed": "node scripts/seed-routing-api.cjs",
+    "test:api": "node --test server/api.test.cjs",
+    "test:routes": "node scripts/test-campus-routing.cjs",
     "export:web": "expo export --platform web",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
