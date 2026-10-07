@@ -17,9 +17,17 @@ Tâm trường: 12.65067, 108.02621, theo https://mapcarta.com/W241971731 (OSM w
 
 Hai cổng lấy từ OpenStreetMap qua OpenFreeMap snapshot 20260913_164504_pt: node 10889665835 (Lê Duẩn), node 8647574544 (Y Wang). Trường THPT Thực hành Cao Nguyên từ OSM way 971349650. Đây là điểm bản đồ, chưa khảo sát GPS hiện trường.
 
-Các nhà số 2, 5, 6, 7, 8, 9, thư viện, căn tin, nhà thi đấu và trung tâm GDQP được ước lượng từ ảnh sơ đồ do người dùng gửi, neo tại hai cổng. `approximateLocationIds` đánh dấu các điểm này. Không dùng tọa độ ước lượng làm đích GPS: Google Maps tìm theo tên đầy đủ và địa chỉ trường để người dùng kiểm tra trước khi đi. Phòng Công tác sinh viên chưa có tọa độ.
+Các nhà số 2, 5, 6, 7, 8, 9, thư viện, căn tin, nhà thi đấu và trung tâm GDQP được ước lượng từ ảnh sơ đồ do người dùng gửi, neo tại hai cổng. `approximateLocationIds` đánh dấu các điểm này. Phòng Công tác sinh viên chưa có tọa độ/lối đi nên không tạo tuyến.
 
-Khi có tọa độ lối vào đã khảo sát, sửa `locationCoordinates` và bỏ id khỏi `approximateLocationIds`. Nút dẫn đến trường dùng cổng chính thay vì tâm khuôn viên. Ứng dụng mở Google Maps để dẫn đường; chưa tính tuyến đường nội bộ trong app.
+Khi có tọa độ lối vào đã khảo sát, sửa `locationCoordinates` và bỏ id khỏi `approximateLocationIds`. Cần cập nhật các nút, nhánh và phạm vi trong `data/campusRouting.ts` theo khảo sát tương ứng.
+
+## Tuyến nội khu và phạm vi
+
+Màn hình gồm hai ô chọn điểm xuất phát/đến, bản đồ chiếm phần giữa, nút vị trí/toàn trường và khung thông tin phía dưới. Nút dẫn đường từ chi tiết chuyển đến bản đồ trong app. Tuyến xanh được tính cục bộ bằng Dijkstra trên các nhánh số hóa từ sơ đồ; không gọi API định tuyến ngoài trường. Khoảng cách tính theo tọa độ ước lượng, thời gian theo tốc độ đi bộ giả định 75 m/phút.
+
+Đường và các nhánh tiếp cận chưa được khảo sát. Đây là **xem trước tuyến tham khảo**, chưa xác nhận có thể đi được, chưa có hướng dẫn rẽ theo thời gian thực hay giọng nói. Không dùng đường thẳng từ GPS đến tòa nhà. GPS hiện chỉ hiển thị vị trí khi nằm trong đa giác và độ chính xác tốt hơn 50 m; điểm xuất phát do người dùng chọn.
+
+Phạm vi đa giác được ước lượng từ ảnh, không phải ranh giới địa chính. Web dùng maxBounds, giới hạn zoom, giới hạn tile và che bên ngoài. Android dùng setMapBoundaries; iOS kiểm tra tâm camera sau thao tác. Cả hai native đều che bên ngoài đa giác. Đồ thị không có đường công cộng bên ngoài; các đoạn tuyến được kiểm tra không vượt đa giác. `npm run test:routes` kiểm tra 196 cặp điểm, chiều ngược, độ dài và phạm vi.
 
 ## Kiểm tra
 

@@ -1,0 +1,443 @@
+{
+  "version": 1,
+  "surveyed": false,
+  "boundary": [
+    {
+      "latitude": 12.650896258518518,
+      "longitude": 108.0233166864151
+    },
+    {
+      "latitude": 12.653998006666665,
+      "longitude": 108.02583315528302
+    },
+    {
+      "latitude": 12.650198365185185,
+      "longitude": 108.02939492660377
+    },
+    {
+      "latitude": 12.647445563703705,
+      "longitude": 108.02807861981132
+    },
+    {
+      "latitude": 12.649965734074074,
+      "longitude": 108.0235102609434
+    }
+  ],
+  "nodes": [
+    {
+      "id": "gate",
+      "latitude": 12.65155538,
+      "longitude": 108.02389741
+    },
+    {
+      "id": "fork",
+      "latitude": 12.652020642222222,
+      "longitude": 108.02443941867925
+    },
+    {
+      "id": "library",
+      "latitude": 12.65136152074074,
+      "longitude": 108.0251750018868
+    },
+    {
+      "id": "bridge",
+      "latitude": 12.650896258518518,
+      "longitude": 108.02560086584906
+    },
+    {
+      "id": "middle",
+      "latitude": 12.64988819037037,
+      "longitude": 108.02653002358491
+    },
+    {
+      "id": "sport",
+      "latitude": 12.649422928148148,
+      "longitude": 108.02699460245283
+    },
+    {
+      "id": "canteen",
+      "latitude": 12.648918894074075,
+      "longitude": 108.02745918132075
+    },
+    {
+      "id": "rear",
+      "latitude": 12.64841486,
+      "longitude": 108.02800119
+    },
+    {
+      "id": "north7",
+      "latitude": 12.652447132592592,
+      "longitude": 108.02482656773586
+    },
+    {
+      "id": "north8",
+      "latitude": 12.65283485111111,
+      "longitude": 108.02509757207547
+    },
+    {
+      "id": "north9",
+      "latitude": 12.653082990962963,
+      "longitude": 108.02536857641509
+    },
+    {
+      "id": "west",
+      "latitude": 12.650896258518518,
+      "longitude": 108.02333217237737
+    },
+    {
+      "id": "medicine",
+      "latitude": 12.650392224444445,
+      "longitude": 108.02358769075472
+    },
+    {
+      "id": "agriculture",
+      "latitude": 12.651594151851851,
+      "longitude": 108.02656873849057
+    },
+    {
+      "id": "school",
+      "latitude": 12.650159593333333,
+      "longitude": 108.02831090924528
+    },
+    {
+      "id": "p1",
+      "latitude": 12.65136152074074,
+      "longitude": 108.02529114660378
+    },
+    {
+      "id": "p2",
+      "latitude": 12.650973802222222,
+      "longitude": 108.02474913792453
+    },
+    {
+      "id": "p3",
+      "latitude": 12.649345384444445,
+      "longitude": 108.02757532603773
+    },
+    {
+      "id": "p5",
+      "latitude": 12.650120821481481,
+      "longitude": 108.02393612490566
+    },
+    {
+      "id": "p6",
+      "latitude": 12.650469768148149,
+      "longitude": 108.0255621509434
+    },
+    {
+      "id": "p7",
+      "latitude": 12.652253273333333,
+      "longitude": 108.02513628698114
+    },
+    {
+      "id": "p8",
+      "latitude": 12.65283485111111,
+      "longitude": 108.0255621509434
+    },
+    {
+      "id": "p9",
+      "latitude": 12.653416428888887,
+      "longitude": 108.02602672981132
+    },
+    {
+      "id": "p10",
+      "latitude": 12.65155538,
+      "longitude": 108.02389741
+    },
+    {
+      "id": "p11",
+      "latitude": 12.64841486,
+      "longitude": 108.02800119
+    },
+    {
+      "id": "p12",
+      "latitude": 12.648725034814815,
+      "longitude": 108.02730432169811
+    },
+    {
+      "id": "p13",
+      "latitude": 12.6494617,
+      "longitude": 108.02560086584906
+    },
+    {
+      "id": "p14",
+      "latitude": 12.65035675,
+      "longitude": 108.02887559
+    },
+    {
+      "id": "p100",
+      "latitude": 12.65155538,
+      "longitude": 108.02389741
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "gate",
+      "to": "fork",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e2",
+      "from": "fork",
+      "to": "library",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e3",
+      "from": "library",
+      "to": "bridge",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e4",
+      "from": "bridge",
+      "to": "middle",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e5",
+      "from": "middle",
+      "to": "sport",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e6",
+      "from": "sport",
+      "to": "canteen",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e7",
+      "from": "canteen",
+      "to": "rear",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e8",
+      "from": "fork",
+      "to": "north7",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e9",
+      "from": "north7",
+      "to": "north8",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e10",
+      "from": "north8",
+      "to": "north9",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e11",
+      "from": "gate",
+      "to": "west",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e12",
+      "from": "west",
+      "to": "medicine",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e13",
+      "from": "bridge",
+      "to": "agriculture",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e14",
+      "from": "middle",
+      "to": "school",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e15",
+      "from": "library",
+      "to": "p1",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e16",
+      "from": "bridge",
+      "to": "p2",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e17",
+      "from": "canteen",
+      "to": "p3",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e18",
+      "from": "medicine",
+      "to": "p5",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e19",
+      "from": "bridge",
+      "to": "p6",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e20",
+      "from": "north7",
+      "to": "p7",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e21",
+      "from": "north8",
+      "to": "p8",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e22",
+      "from": "north9",
+      "to": "p9",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e23",
+      "from": "gate",
+      "to": "p10",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e24",
+      "from": "rear",
+      "to": "p11",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e25",
+      "from": "rear",
+      "to": "p12",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e26",
+      "from": "sport",
+      "to": "p13",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e27",
+      "from": "school",
+      "to": "p14",
+      "bidirectional": true,
+      "closed": false
+    },
+    {
+      "id": "e28",
+      "from": "gate",
+      "to": "p100",
+      "bidirectional": true,
+      "closed": false
+    }
+  ],
+  "destinations": [
+    {
+      "id": "1",
+      "nodeId": "p1",
+      "name": "Thư viện"
+    },
+    {
+      "id": "2",
+      "nodeId": "p2",
+      "name": "Nhà số 2"
+    },
+    {
+      "id": "3",
+      "nodeId": "p3",
+      "name": "Căn tin sinh viên"
+    },
+    {
+      "id": "5",
+      "nodeId": "p5",
+      "name": "Nhà số 5"
+    },
+    {
+      "id": "6",
+      "nodeId": "p6",
+      "name": "Nhà số 6"
+    },
+    {
+      "id": "7",
+      "nodeId": "p7",
+      "name": "Nhà số 7"
+    },
+    {
+      "id": "8",
+      "nodeId": "p8",
+      "name": "Nhà số 8"
+    },
+    {
+      "id": "9",
+      "nodeId": "p9",
+      "name": "Nhà số 9"
+    },
+    {
+      "id": "10",
+      "nodeId": "p10",
+      "name": "Cổng chính"
+    },
+    {
+      "id": "11",
+      "nodeId": "p11",
+      "name": "Cổng sau"
+    },
+    {
+      "id": "12",
+      "nodeId": "p12",
+      "name": "Trung tâm Giáo dục Quốc phòng và An ninh"
+    },
+    {
+      "id": "13",
+      "nodeId": "p13",
+      "name": "Nhà thi đấu"
+    },
+    {
+      "id": "14",
+      "nodeId": "p14",
+      "name": "Trường THPT Thực hành Cao Nguyên"
+    },
+    {
+      "id": "100",
+      "nodeId": "p100",
+      "name": "Trường Đại học Tây Nguyên"
+    }
+  ]
+}
