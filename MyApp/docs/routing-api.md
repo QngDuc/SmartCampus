@@ -1,6 +1,6 @@
 # API chỉ đường trong trường Tây Nguyên
 
-Backend Node.js riêng với Expo; không cần thêm thư viện. Dữ liệu seed lấy từ sơ đồ tham khảo hiện có, **chưa khảo sát thực tế**. Chỉ tính tuyến đi bộ theo các lối đã nhập, không tự suy ra lối đi từ ảnh và không cung cấp điều hướng GPS từng chặng.
+API bản đồ nằm trong backend chung tại ../api/campus và chạy cùng API lịch học trên cổng 3000. Cài dependencies bằng npm install trong thư mục ../api; khởi động bằng npm start tại đó hoặc npm run api từ MyApp. Dữ liệu seed lấy từ sơ đồ tham khảo hiện có, **chưa khảo sát thực tế**. Chỉ tính tuyến đi bộ theo các lối đã nhập, không tự suy ra lối đi từ ảnh và không cung cấp điều hướng GPS từng chặng.
 
 ## Chạy trên máy tính (PowerShell)
 
@@ -9,7 +9,7 @@ $env:API_ADMIN_TOKEN = 'thay-bang-token-rieng-cua-ban'
 npm run api
 ```
 
-Mở `http://127.0.0.1:3001/api/destinations` hoặc thử trong Postman. Không đặt token quản trị trong mã nguồn, biến `EXPO_PUBLIC_*` hay ứng dụng gửi cho sinh viên. Không cấu hình token thì API chỉ cho đọc và tính đường. Đây là backend phát triển cho một tiến trình; trước khi triển khai công khai cần HTTPS và cơ chế đăng nhập/phân quyền phù hợp.
+Mở `http://127.0.0.1:3000/api/destinations` hoặc thử trong Postman. Không đặt token quản trị trong mã nguồn, biến `EXPO_PUBLIC_*` hay ứng dụng gửi cho sinh viên. Không cấu hình token thì API chỉ cho đọc và tính đường. Đây là backend phát triển cho một tiến trình; trước khi triển khai công khai cần HTTPS và cơ chế đăng nhập/phân quyền phù hợp.
 
 ## Các endpoint
 
@@ -61,7 +61,7 @@ DELETE `/api/destinations/new-place` để xóa điểm đến. Trước khi xó
 Thử tính đường bằng PowerShell:
 
 ```powershell
-Invoke-RestMethod 'http://127.0.0.1:3001/api/routes?from=10&to=1'
+Invoke-RestMethod 'http://127.0.0.1:3000/api/routes?from=10&to=1'
 ```
 
 Kết quả gồm `from`, `to`, `version`, `surveyed:false`, `meters`, `minutes`, `nodeIds`, `edgeIds`, `points` (latitude/longitude để vẽ đường). Thời gian ước lượng theo 75 m/phút. Dijkstra chọn tổng chiều dài nhỏ nhất, bỏ đường `closed`, tôn trọng chiều đường. Nếu có nhiều tuyến bằng nhau, trả một tuyến; chưa trả danh sách tuyến thay thế hay hướng dẫn rẽ.
@@ -70,9 +70,9 @@ Lỗi: 400 dữ liệu sai/ngoài trường; 401 sai token; 403 origin web bị 
 
 ## Dùng iPhone và cập nhật dữ liệu
 
-Để thử qua cùng Wi-Fi, khởi động server với `$env:API_HOST = '0.0.0.0'`, dùng `http://<IPv4-may-tinh>:3001/api/destinations` trên iPhone. `localhost` trên iPhone là chính điện thoại. Cho phép cổng 3001 trong tường lửa mạng riêng nếu cần. Web chạy ở origin khác cần khai báo `API_CORS_ORIGINS` (các origin cách nhau dấu phẩy).
+Để thử qua cùng Wi-Fi, khởi động server với `$env:API_HOST = '0.0.0.0'`, dùng `http://<IPv4-may-tinh>:3000/api/destinations` trên iPhone. `localhost` trên iPhone là chính điện thoại. Cho phép cổng 3000 trong tường lửa mạng riêng nếu cần. Web chạy ở origin khác cần khai báo `API_CORS_ORIGINS` (các origin cách nhau dấu phẩy).
 
-Dữ liệu chỉnh sửa lưu ở `server/storage/campus.json`, tồn tại sau khi khởi động lại và không commit Git. Có thể đổi bằng `API_DATA_FILE`; sao lưu file này. Một tiến trình API sở hữu một file; không chạy nhiều tiến trình dùng chung file. Dữ liệu ban đầu nằm trong `server/seed.json`; `npm run api:seed` chỉ tạo lại seed từ sơ đồ của app, không ghi đè dữ liệu đang sử dụng.
+Dữ liệu chỉnh sửa lưu ở `../api/campus/storage/campus.json`, tồn tại sau khi khởi động lại và không commit Git. Có thể đổi bằng `API_DATA_FILE`; sao lưu file này. Một tiến trình API sở hữu một file; không chạy nhiều tiến trình dùng chung file. Dữ liệu ban đầu nằm trong `../api/campus/seed.json`; `npm run api:seed` chỉ tạo lại seed từ sơ đồ của app, không ghi đè dữ liệu đang sử dụng.
 
 Ứng dụng bản đồ hiện vẫn dùng dữ liệu cục bộ, **chưa tự gọi hoặc đồng bộ API này**. GET `/api/map` cung cấp snapshot có version để làm phần đồng bộ tiếp theo. API cần kết nối tới server; dùng offline cần tải snapshot về điện thoại, lưu bản đồ nền và tính đường trên thiết bị. Chưa triển khai cache/offline sync trong thay đổi này.
 

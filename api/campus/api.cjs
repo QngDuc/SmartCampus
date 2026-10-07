@@ -1,4 +1,4 @@
-// Máy chủ API chạy riêng bằng `npm run api`; ứng dụng Expo chưa gọi API này.
+// Map request handler shared by the backend and isolated HTTP tests.
 // Luồng xử lý: đọc yêu cầu → kiểm tra quyền/dữ liệu → tìm đường hoặc lưu → trả JSON.
 const http = require("node:http");
 const fs = require("node:fs");
@@ -12,7 +12,7 @@ const {
 } = require("./graph.cjs");
 
 // Cho phép truyền cấu hình để chạy thật hoặc kiểm thử với file dữ liệu riêng.
-function createApi({
+function createCampusHandler({
   dataFile = path.join(__dirname, "storage/campus.json"),
   adminToken = "",
   origins = [],
@@ -59,7 +59,7 @@ function createApi({
       fail(400, "Body phải là object JSON.");
     return value;
   }
-  return http.createServer(async (req, res) => {
+  return async (req, res) => {
     const send = (status, value) => {
       res.writeHead(status, {
         "Content-Type": "application/json; charset=utf-8",
@@ -173,26 +173,13 @@ function createApi({
           },
         });
     }
-  });
+  };
+}
+
+function createApi(options) {
+  return http.createServer(createCampusHandler(options));
 }
 // Chỉ mở cổng khi chạy trực tiếp; import createApi trong test không tự khởi động server.
 // API_HOST/API_PORT: địa chỉ lắng nghe; API_DATA_FILE: file lưu dữ liệu.
 // API_ADMIN_TOKEN: khóa sửa dữ liệu; API_CORS_ORIGINS: các web origin cách nhau bằng dấu phẩy.
-if (require.main === module) {
-  const host = process.env.API_HOST || "127.0.0.1",
-    port = Number(process.env.API_PORT || 3001);
-  const server = createApi({
-    dataFile: process.env.API_DATA_FILE,
-    adminToken: process.env.API_ADMIN_TOKEN,
-    origins: (
-      process.env.API_CORS_ORIGINS ||
-      "http://localhost:8081,http://localhost:19006"
-    )
-      .split(",")
-      .map((s) => s.trim()),
-  });
-  server.listen(port, host, () =>
-    console.log(`Campus API: http://${host}:${port}/api/health`),
-  );
-}
-module.exports = { createApi };
+module.exports = { createApi, createCampusHandler };
