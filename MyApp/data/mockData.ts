@@ -168,7 +168,15 @@ export const notifications = [
     isRead: true,
   },
 ];
-export const days = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+export const days = [
+  'Thứ 2',
+  'Thứ 3',
+  'Thứ 4',
+  'Thứ 5',
+  'Thứ 6',
+  'Thứ 7',
+  'CN',
+];
 export const schedules = [
   {
     id: 1,
