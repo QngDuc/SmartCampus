@@ -30,9 +30,9 @@ const seed = {
 };
 // Chạy `npm run api:seed` khi cần tạo lại seed.json từ dữ liệu nguồn.
 // API đã có storage/campus.json sẽ tiếp tục dùng file lưu đó thay vì seed mới.
-fs.mkdirSync(path.join(__dirname, "../server"), { recursive: true });
+fs.mkdirSync(path.join(__dirname, "../../api/campus"), { recursive: true });
 fs.writeFileSync(
-  path.join(__dirname, "../server/seed.json"),
+  path.join(__dirname, "../../api/campus/seed.json"),
   JSON.stringify(seed, null, 2) + "\n",
 );
-console.log("Created server/seed.json (approximate campus graph).");
+console.log("Created api/campus/seed.json (approximate campus graph).");
