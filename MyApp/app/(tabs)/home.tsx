@@ -22,7 +22,7 @@ export default function HomeScreen() {
     {/* Flexbox row và wrap chia các tiện ích thành hai cột. */}
     <View style={s.grid}>
       <Pressable accessibilityRole="button" style={[s.card, s.tile]} onPress={() => router.navigate('/(tabs)/map')}><Text style={s.badge}>01 / KHÁM PHÁ</Text><Text style={s.heading}>Bản đồ ↗</Text></Pressable>
-      <Pressable accessibilityRole="button" style={[s.card, s.tile]} onPress={() => router.navigate('/(tabs)/schedule')}><Text style={s.badge}>02 / HỌC TẬP</Text><Text style={s.heading}>Lịch học ↗</Text></Pressable>
+      <Pressable accessibilityRole="button" style={[s.card, s.tile]} onPress={() => router.navigate('/(tabs)/schedule')}><Text style={s.badge}>02 / HỌC TẬP</Text><Text style={s.heading}>Lịch & điểm ↗</Text></Pressable>
       <Pressable accessibilityRole="button" style={[s.card, s.tile]} onPress={() => router.navigate('/(tabs)/events')}><Text style={s.badge}>03 / TỪ NHÀ TRƯỜNG</Text><Text style={s.heading}>Thông báo trường ↗</Text></Pressable>
       <Pressable accessibilityRole="button" style={[s.card, s.tile]} onPress={() => router.push('/notifications')}><Text style={s.badge}>04 / CẬP NHẬT</Text><Text style={s.heading}>Thông báo ↗</Text></Pressable>
     </View>

@@ -290,6 +290,73 @@ $('table').each((tableIndex, table) => {
   }
 });
 
+
+// Tra cứu kết quả học tập hệ chính quy từ cổng chính thức của trường.
+app.get('/api/grades/:msv', async (req, res) => {
+  const msv = req.params.msv;
+
+  if (!/^\d{8}$/.test(msv)) {
+    return res.status(400).json({ message: 'Mã sinh viên phải gồm 8 chữ số.' });
+  }
+
+  try {
+    const response = await axios.post(
+      'https://www.ttn.edu.vn/libraries/tnu/kqcq.php',
+      new URLSearchParams({ msv, dk: '10' }).toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest',
+          Referer: 'https://www.ttn.edu.vn/index.php?option=com_tnu&view=kqchinhquy',
+        },
+        httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+        timeout: 20000,
+      }
+    );
+
+    const $ = cheerio.load(response.data);
+    const responseText = $('body').text().replace(/\s+/g, ' ').trim() || $.text().trim();
+
+    if (/không tìm thấy dữ liệu/i.test(responseText)) {
+      return res.status(404).json({ message: 'Không tìm thấy kết quả học tập cho mã sinh viên này.' });
+    }
+
+    const tables = [];
+    $('table').each((tableIndex, table) => {
+      const parsedRows = [];
+      $(table).find('tr').each((rowIndex, row) => {
+        const cells = $(row)
+          .find('th, td')
+          .map((cellIndex, cell) => $(cell).text().replace(/\s+/g, ' ').trim())
+          .get();
+        if (cells.length) {
+          parsedRows.push({ cells, isHeader: $(row).find('th').length > 0 });
+        }
+      });
+
+      const headerRow = parsedRows.find(row => row.isHeader);
+      const rows = parsedRows.filter(row => !row.isHeader).map(row => row.cells);
+      if (headerRow || rows.length) {
+        tables.push({
+          title: $(table).find('caption').first().text().replace(/\s+/g, ' ').trim(),
+          headers: headerRow?.cells ?? [],
+          rows,
+        });
+      }
+    });
+
+    if (!tables.length) {
+      return res.status(502).json({ message: 'Website trường trả về dữ liệu điểm không đúng định dạng.' });
+    }
+
+    res.set('Cache-Control', 'no-store');
+    res.json({ studentId: msv, tables });
+  } catch (error) {
+    console.error('Không lấy được kết quả học tập từ website trường:', error.message);
+    res.status(502).json({ message: 'Không thể lấy kết quả học tập từ website trường.' });
+  }
+});
+
 // ========================================
 // 3. API LẤY TẤT CẢ LỊCH HỌC TỪ MONGODB
 // GET /api/schedules
