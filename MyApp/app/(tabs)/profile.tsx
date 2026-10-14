@@ -27,9 +27,9 @@ export default function ProfileScreen() {
       <Text style={s.muted}>Sinh viên · CNTT K23</Text>
     </View>
     <View style={s.card}>
-      <Text style={s.muted}>Mã số sinh viên</Text><Text style={s.heading}>23103047</Text>
+      <Text style={s.muted}>Mã số sinh viên</Text><Text style={s.heading}>23103027</Text>
       <Text style={s.muted}>Lớp</Text><Text style={s.text}>CNTT K23</Text>
-      <Text style={s.muted}>Email</Text><Text style={s.text}>23103047@student.edu.vn</Text>
+      <Text style={s.muted}>Email</Text><Text style={s.text}>23103027@student.edu.vn</Text>
     </View>
     <Button title="Đăng xuất" onPress={logout} secondary />
   </Screen>;

@@ -4,14 +4,25 @@ import { useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen, Button } from '@/components/campus-ui';
 import { colors, s } from '@/constants/campus';
-import { events } from '@/data/mockData';
+import { events, upcomingEvents } from '@/data/mockData';
 
 import { showAlert } from '@/utils/feedback';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const event = events.find(item => String(item.id) === id);
-  const [registered, setRegistered] = useState(false);
+  const upcoming = upcomingEvents.find(item => String(item.id) === id);
+  const regular = events.find(item => String(item.id) === id);
+  const event = upcoming
+    ? {
+        id: upcoming.id,
+        title: upcoming.title,
+        date: upcoming.date,
+        time: upcoming.time,
+        location: upcoming.location,
+        description: `Sự kiện "${upcoming.title}" được tổ chức tại ${upcoming.location}. Kính mời toàn thể các bạn sinh viên tham gia nhiệt tình để có cơ hội giao lưu, học hỏi và tích lũy điểm rèn luyện!`,
+      }
+    : regular;
+  const [registered, setRegistered] = useState(upcoming?.isRegistered ?? false);
   if (!event) return <Screen back><Text style={s.heading}>Không tìm thấy sự kiện.</Text></Screen>;
   function register() {
     if (registered) return;
