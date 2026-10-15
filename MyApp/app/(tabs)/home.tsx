@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -9,22 +10,29 @@ import {
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen } from '@/components/campus-ui';
+import { useAuth } from '@/components/auth-provider';
+import { calculateGpa, parseCourseGrades } from '@/utils/academic';
 import {
-  currentStudent,
-  todaySchedule,
   upcomingEvents,
   latestNotifications,
 } from '@/data/mockData';
 
 export default function HomeScreen() {
+  const { user, grades, timetable, isSyncing } = useAuth();
+  const gradeSummary = calculateGpa(grades ? parseCourseGrades(grades.tables) : []);
+  const weekdays = ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  const todayName = weekdays[new Date().getDay()];
+  const todayLessons = timetable?.schedules.filter(item => item.day === todayName) ?? [];
+  const nextLesson = todayLessons[0];
+
   return (
     <Screen>
       {/* 1. LỜI CHÀO & AVATAR SINH VIÊN */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <Text style={styles.greetingText}>Xin chào 👋</Text>
-          <Text style={styles.userName}>{currentStudent.name}</Text>
-          <Text style={styles.studentCode}>{currentStudent.id}</Text>
+          <Text style={styles.userName}>{user?.name ?? 'Sinh viên'}</Text>
+          <Text style={styles.studentCode}>{user?.studentId ?? ''}</Text>
         </View>
 
         <Pressable
@@ -33,7 +41,7 @@ export default function HomeScreen() {
           style={styles.avatarButton}
           onPress={() => router.navigate('/(tabs)/profile')}
         >
-          <Text style={styles.avatarLetter}>{currentStudent.avatarChar}</Text>
+          <Text style={styles.avatarLetter}>{user?.name.trim().charAt(0).toUpperCase() ?? '?'}</Text>
         </Pressable>
       </View>
 
@@ -52,7 +60,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.statLabel}>GPA</Text>
           </View>
-          <Text style={styles.statValue}>{currentStudent.gpa}</Text>
+          <Text style={styles.statValue}>{gradeSummary.gpa === null ? '—' : gradeSummary.gpa.toFixed(2)}</Text>
         </Pressable>
 
         {/* Thẻ Tín chỉ */}
@@ -68,7 +76,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.statLabel}>Tín chỉ</Text>
           </View>
-          <Text style={styles.statValue}>{currentStudent.credits}</Text>
+          <Text style={styles.statValue}>{gradeSummary.gpa === null ? '—' : gradeSummary.earnedCredits}</Text>
         </Pressable>
       </View>
 
@@ -84,14 +92,23 @@ export default function HomeScreen() {
         onPress={() => router.push('/(tabs)/schedule')}
       >
         <View style={styles.yellowIndicator} />
-        <View style={styles.todayTimeCol}>
-          <Text style={styles.todayTimeStart}>{todaySchedule.timeStart}</Text>
-          <Text style={styles.todayTimeEnd}>{todaySchedule.timeEnd}</Text>
-        </View>
-        <View style={styles.todayContentCol}>
-          <Text style={styles.todaySubject}>{todaySchedule.subject}</Text>
-          <Text style={styles.todayLocation}>{todaySchedule.location}</Text>
-        </View>
+        {isSyncing && !timetable ? (
+          <View style={styles.todayContentCol}>
+            <ActivityIndicator size="small" color="#2563EB" />
+            <Text style={styles.todayLocation}>Đang đồng bộ thời khóa biểu…</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.todayTimeCol}>
+              <Text style={styles.todayTimeStart}>{nextLesson?.session ?? 'Hôm nay'}</Text>
+              <Text style={styles.todayTimeEnd}>{nextLesson?.period ? `Tiết ${nextLesson.period}` : ''}</Text>
+            </View>
+            <View style={styles.todayContentCol}>
+              <Text style={styles.todaySubject}>{nextLesson?.subject ?? 'Không có lịch học hôm nay'}</Text>
+              <Text style={styles.todayLocation}>{nextLesson ? `Phòng ${nextLesson.room || 'chưa cập nhật'}` : timetable ? 'Thời khóa biểu đã được đồng bộ' : 'Chưa có dữ liệu thời khóa biểu'}</Text>
+            </View>
+          </>
+        )}
       </Pressable>
 
       {/* 4. THAO TÁC NHANH */}

@@ -7,12 +7,14 @@ const cheerio = require('cheerio');
 require('dotenv').config();
 
 const Schedule = require('./models/Schedule');
+const authRouter = require('./routes/auth');
 
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(cors());
+app.use('/api/auth', authRouter);
 
 
 // ========================================

@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,19 +9,8 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen } from '@/components/campus-ui';
-import { currentStudent, defaultGrades } from '@/data/mockData';
-import { showAlert } from '@/utils/feedback';
-
-type GradeTable = {
-  title: string;
-  headers: string[];
-  rows: string[][];
-};
-
-type GradesResponse = {
-  studentId: string;
-  tables: GradeTable[];
-};
+import { useAuth } from '@/components/auth-provider';
+import { calculateGpa, parseCourseGrades } from '@/utils/academic';
 
 function normalizeSearchText(value: string) {
   return value
@@ -33,106 +21,16 @@ function normalizeSearchText(value: string) {
 }
 
 export default function GradesScreen() {
-  const [studentId, setStudentId] = useState(currentStudent.id);
-  const [loading, setLoading] = useState(false);
-  const [liveGrades, setLiveGrades] = useState<GradesResponse | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  const { user, grades, isSyncing, syncErrors } = useAuth();
   const [courseSearch, setCourseSearch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('Tất cả');
-
-  // Tra cứu điểm từ server trường (giữ nguyên nút tìm kiếm và logic API)
-  async function handleSearchGrades() {
-    const msv = studentId.trim();
-    setSearchError(null);
-    setCourseSearch('');
-
-    if (!msv) {
-      showAlert('Thiếu mã sinh viên', 'Vui lòng nhập mã sinh viên để tra cứu.');
-      return;
-    }
-
-    if (!/^\d{8}$/.test(msv)) {
-      setSearchError('Mã sinh viên phải gồm 8 chữ số.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch(`http://localhost:3000/api/grades/${msv}`);
-      const data = (await response.json()) as GradesResponse & { message?: string };
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Không thể lấy kết quả học tập từ hệ thống.');
-      }
-
-      if (!Array.isArray(data.tables)) {
-        throw new Error('Dữ liệu điểm từ website trường không đúng định dạng.');
-      }
-
-      setLiveGrades(data);
-    } catch (error) {
-      console.log('Lỗi tra cứu điểm:', error);
-      setSearchError(
-        error instanceof Error
-          ? error.message
-          : 'Không thể kết nối đến máy chủ điểm. Vui lòng kiểm tra lại server hoặc dùng dữ liệu lưu sẵn.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Danh sách môn học hiển thị (kết hợp dữ liệu trực tiếp hoặc mặc định của sinh viên)
-  const isUsingLive = !!liveGrades;
-
-  // Lọc dữ liệu bảng từ API trường nếu có
-  const liveMatchingRows = useMemo(() => {
-    if (!liveGrades) return [];
-    return liveGrades.tables.flatMap((table, tableIndex) => {
-      const courseIndex = table.headers.findIndex(h =>
-        /học phần|môn học|tên môn|tên học phần/i.test(h)
-      );
-      const scoreIndex = table.headers.findIndex(h => /điểm|grade|score/i.test(h));
-      const creditIndex = table.headers.findIndex(h => /tín chỉ|stc|tc/i.test(h));
-
-      return table.rows
-        .filter(row =>
-          normalizeSearchText(row.join(' ')).includes(
-            normalizeSearchText(courseSearch.trim())
-          )
-        )
-        .map((row, rowIndex) => ({
-          tableIndex,
-          rowIndex,
-          tableTitle: table.title,
-          headers: table.headers,
-          row,
-          courseName: row[courseIndex >= 0 ? courseIndex : 0] || 'Học phần',
-          score: scoreIndex >= 0 ? row[scoreIndex] : '',
-          credits: creditIndex >= 0 ? row[creditIndex] : '',
-        }));
-    });
-  }, [liveGrades, courseSearch]);
-
-  // Lọc dữ liệu mặc định chuẩn theo môn và học kỳ
-  const filteredDefaultGrades = useMemo(() => {
-    return defaultGrades.filter(item => {
-      const matchesSearch =
-        normalizeSearchText(item.subject).includes(
-          normalizeSearchText(courseSearch.trim())
-        ) ||
-        normalizeSearchText(item.code).includes(
-          normalizeSearchText(courseSearch.trim())
-        );
-
-      const matchesSemester =
-        selectedSemester === 'Tất cả' || item.semester === selectedSemester;
-
-      return matchesSearch && matchesSemester;
-    });
-  }, [courseSearch, selectedSemester]);
-
-  const semesters = ['Tất cả', 'HK1 (2026-2027)', 'HK2 (2025-2026)', 'HK1 (2025-2026)'];
+  const courses = useMemo(() => grades ? parseCourseGrades(grades.tables) : [], [grades]);
+  const filteredCourses = useMemo(() => {
+    const query = normalizeSearchText(courseSearch.trim());
+    return courses.filter(course =>
+      normalizeSearchText(`${course.subject} ${course.code} ${course.semester}`).includes(query)
+    );
+  }, [courseSearch, courses]);
+  const gradeSummary = useMemo(() => calculateGpa(courses), [courses]);
 
   return (
     <Screen>
@@ -143,7 +41,7 @@ export default function GradesScreen() {
           <Text style={styles.pageTitle}>Bảng điểm sinh viên</Text>
         </View>
         <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>{currentStudent.avatarChar}</Text>
+          <Text style={styles.avatarText}>{user?.name.trim().charAt(0).toUpperCase() ?? '?'}</Text>
         </View>
       </View>
 
@@ -155,10 +53,10 @@ export default function GradesScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.studentName}>
-              {isUsingLive ? `Sinh viên ${liveGrades.studentId}` : currentStudent.name}
+              {user?.name ?? 'Sinh viên'}
             </Text>
             <Text style={styles.studentSub}>
-              MSSV: {isUsingLive ? liveGrades.studentId : currentStudent.id} · {currentStudent.class}
+              MSSV: {user?.studentId ?? '—'}
             </Text>
           </View>
           <View style={styles.tagStatus}>
@@ -177,8 +75,8 @@ export default function GradesScreen() {
             </View>
             <Text style={styles.statLabel}>GPA</Text>
           </View>
-          <Text style={styles.statValue}>{currentStudent.gpa}</Text>
-          <Text style={styles.statSubText}>Thang điểm 4.0</Text>
+          <Text style={styles.statValue}>{gradeSummary.gpa === null ? '—' : gradeSummary.gpa.toFixed(2)}</Text>
+          <Text style={styles.statSubText}>A=4 · B=3 · C=2 · D=1 · F=0</Text>
         </View>
 
         {/* THẺ TÍN CHỈ */}
@@ -189,72 +87,12 @@ export default function GradesScreen() {
             </View>
             <Text style={styles.statLabel}>Tín chỉ</Text>
           </View>
-          <Text style={styles.statValue}>{currentStudent.credits}</Text>
-          <Text style={styles.statSubText}>
-            {currentStudent.credits}/{currentStudent.totalCredits} TC tích lũy
-          </Text>
+          <Text style={styles.statValue}>{gradeSummary.gpa === null ? '—' : gradeSummary.earnedCredits}</Text>
+          <Text style={styles.statSubText}>Tín chỉ đạt</Text>
         </View>
       </View>
 
-      {/* KHUNG TRA CỨU ĐIỂM - VẪN GIỮ NGUYÊN NÚT TÌM KIẾM */}
-      <View style={styles.searchContainerCard}>
-        <Text style={styles.sectionTitle}>Tra cứu điểm theo MSSV</Text>
-        <Text style={styles.searchHelpText}>
-          Nhập mã sinh viên để tra cứu dữ liệu mới nhất từ cổng thông tin trường.
-        </Text>
-
-        <View style={styles.searchFormRow}>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons name="id-card-outline" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
-            <TextInput
-              value={studentId}
-              onChangeText={setStudentId}
-              placeholder="Nhập 8 chữ số, VD: 23103027"
-              placeholderTextColor="#94A3B8"
-              keyboardType="number-pad"
-              maxLength={8}
-              style={styles.searchInput}
-            />
-            {!!studentId && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Xóa mã sinh viên"
-                onPress={() => setStudentId('')}
-                hitSlop={8}
-              >
-                <Ionicons name="close-circle" size={18} color="#CBD5E1" />
-              </Pressable>
-            )}
-          </View>
-
-          {/* NÚT TÌM KIẾM ĐƯỢC GIỮ NGUYÊN VÀ THIẾT KẾ ĐẸP MẮT */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Nút tìm kiếm điểm sinh viên"
-            style={[styles.searchButton, loading && styles.searchButtonDisabled]}
-            disabled={loading}
-            onPress={handleSearchGrades}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <>
-                <Ionicons name="search" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.searchButtonText}>Tra cứu điểm</Text>
-              </>
-            )}
-          </Pressable>
-        </View>
-
-        {searchError && (
-          <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#DC2626" style={{ marginRight: 6 }} />
-            <Text style={styles.errorBannerText}>{searchError}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* THANH TÌM KIẾM TÊN MÔN HỌC & LỌC HỌC KỲ */}
+      {/* TÌM TRONG BẢNG ĐIỂM ĐÃ ĐỒNG BỘ */}
       <View style={styles.filterSection}>
         <View style={styles.courseSearchBar}>
           <Ionicons name="search-outline" size={18} color="#64748B" style={{ marginRight: 8 }} />
@@ -277,145 +115,58 @@ export default function GradesScreen() {
           )}
         </View>
 
-        {!isUsingLive && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.semesterTabsList}
-          >
-            {semesters.map(sem => {
-              const active = selectedSemester === sem;
-              return (
-                <Pressable
-                  key={sem}
-                  accessibilityRole="button"
-                  onPress={() => setSelectedSemester(sem)}
-                  style={[styles.semesterTab, active && styles.semesterTabActive]}
-                >
-                  <Text style={[styles.semesterTabText, active && styles.semesterTabTextActive]}>
-                    {sem}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
       </View>
 
-      {/* DANH SÁCH HỌC PHẦN & ĐIỂM THI */}
-      <View style={styles.courseListHeader}>
-        <Text style={styles.sectionTitle}>
-          {isUsingLive
-            ? `Kết quả từ cổng trường (${liveMatchingRows.length} học phần)`
-            : `Danh sách học phần (${filteredDefaultGrades.length})`}
-        </Text>
-      </View>
-
-      {/* HIỂN THỊ KẾT QUẢ TỪ API TRƯỜNG NẾU CÓ */}
-      {isUsingLive && (
-        <View style={{ gap: 12 }}>
-          {liveMatchingRows.map(
-            ({ tableIndex, rowIndex, tableTitle, headers, row, courseName, score, credits }) => (
-              <View key={`${tableIndex}-${rowIndex}`} style={styles.courseCard}>
-                <View style={styles.courseCardHeader}>
-                  <View style={{ flex: 1, marginRight: 10 }}>
-                    <Text style={styles.courseName}>{courseName}</Text>
-                    {!!tableTitle && <Text style={styles.courseSemester}>{tableTitle}</Text>}
-                  </View>
-                  {!!score && (
-                    <View style={styles.gradeScoreBadge}>
-                      <Text style={styles.gradeScoreBadgeText}>{score}</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.chipsRow}>
-                  {!!credits && (
-                    <View style={styles.chip}>
-                      <Text style={styles.chipText}>
-                        Số TC: <Text style={styles.chipBold}>{credits}</Text>
-                      </Text>
-                    </View>
-                  )}
-                  {row.map((cell, idx) => {
-                    const header = headers[idx] || '';
-                    if (!cell || /học phần|tên môn|điểm|stc|tín chỉ/i.test(header)) return null;
-                    return (
-                      <View key={`${rowIndex}-${idx}`} style={styles.chip}>
-                        <Text style={styles.chipText}>
-                          {header ? `${header}: ` : ''}
-                          <Text style={styles.chipBold}>{cell}</Text>
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            )
-          )}
-
-          {liveMatchingRows.length === 0 && (
-            <View style={styles.emptyCard}>
-              <Ionicons name="document-text-outline" size={36} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>Không tìm thấy học phần</Text>
-              <Text style={styles.emptySub}>Thử tìm bằng từ khóa hoặc tên học phần khác.</Text>
-            </View>
-          )}
+      {isSyncing && !grades && (
+        <View style={styles.emptyCard}>
+          <ActivityIndicator color="#2563EB" />
+          <Text style={styles.emptyTitle}>Đang đồng bộ bảng điểm</Text>
+          <Text style={styles.emptySub}>Dữ liệu được tải theo mã sinh viên của bạn.</Text>
         </View>
       )}
 
-      {/* HIỂN THỊ DỮ LIỆU ĐIỂM CHUẨN MẪU (THEO GIAO DIỆN NHƯ ẢNH) */}
-      {!isUsingLive && (
-        <View style={{ gap: 12 }}>
-          {filteredDefaultGrades.map(item => (
-            <View key={item.code} style={styles.courseCard}>
+      {!!syncErrors.grades && !isSyncing && (
+        <View style={styles.emptyCard}>
+          <Ionicons name="cloud-offline-outline" size={34} color="#C2410C" />
+          <Text style={styles.emptyTitle}>Chưa tải được bảng điểm</Text>
+          <Text style={styles.emptySub}>{syncErrors.grades}</Text>
+        </View>
+      )}
+
+      {grades && (
+        <>
+          <View style={styles.courseListHeader}>
+            <Text style={styles.sectionTitle}>Học phần ({filteredCourses.length})</Text>
+          </View>
+          <View style={{ gap: 12 }}>
+            {filteredCourses.map(course => (
+            <View key={course.id} style={styles.courseCard}>
               <View style={styles.courseCardHeader}>
                 <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={styles.courseName}>{item.subject}</Text>
-                  <Text style={styles.courseCodeRow}>
-                    {item.code} · <Text style={{ color: '#2563EB' }}>{item.semester}</Text>
-                  </Text>
+                  <Text style={styles.courseName}>{course.subject}</Text>
+                  {!!(course.code || course.semester) && <Text style={styles.courseCodeRow}>{[course.code, course.semester].filter(Boolean).join(' · ')}</Text>}
                 </View>
                 <View style={styles.gradeScoreBadge}>
-                  <Text style={styles.gradeScoreBadgeText}>
-                    {item.score10} ({item.scoreLetter})
-                  </Text>
+                  <Text style={styles.gradeScoreBadgeText}>{course.letter ?? 'Chưa có điểm'}</Text>
                 </View>
               </View>
 
               <View style={styles.chipsRow}>
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>
-                    Số TC: <Text style={styles.chipBold}>{item.credits}</Text>
-                  </Text>
-                </View>
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>
-                    Quá trình: <Text style={styles.chipBold}>{item.midterm}</Text>
-                  </Text>
-                </View>
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>
-                    Thi KTHP: <Text style={styles.chipBold}>{item.final}</Text>
-                  </Text>
-                </View>
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>
-                    Thang 4: <Text style={styles.chipBold}>{item.score4}</Text>
-                  </Text>
-                </View>
+                {course.credits !== null && <View style={styles.chip}><Text style={styles.chipText}>Tín chỉ: <Text style={styles.chipBold}>{course.credits}</Text></Text></View>}
+                {course.details.map(detail => <View key={`${course.id}-${detail.label}`} style={styles.chip}><Text style={styles.chipText}>{detail.label}: <Text style={styles.chipBold}>{detail.value}</Text></Text></View>)}
               </View>
             </View>
           ))}
 
-          {filteredDefaultGrades.length === 0 && (
+          {filteredCourses.length === 0 && (
             <View style={styles.emptyCard}>
               <Ionicons name="search-outline" size={36} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>Không tìm thấy học phần</Text>
-              <Text style={styles.emptySub}>Không có môn nào khớp với từ khóa &quot;{courseSearch}&quot;.</Text>
+              <Text style={styles.emptyTitle}>{courseSearch ? 'Không tìm thấy học phần' : 'Chưa có dữ liệu điểm'}</Text>
+              <Text style={styles.emptySub}>{courseSearch ? `Không có học phần khớp với “${courseSearch}”.` : 'Cổng thông tin trường chưa trả về học phần nào.'}</Text>
             </View>
           )}
-        </View>
+          </View>
+        </>
       )}
 
       <View style={{ height: 20 }} />
