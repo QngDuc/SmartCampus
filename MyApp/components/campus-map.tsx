@@ -13,11 +13,24 @@ export default function CampusMap({
   userLocation,
   onSelect,
   route,
+  navigation,
 }: CampusMapProps) {
   const map = useRef<MapView>(null);
   // Native dùng SDK bản đồ của hệ điều hành, không dùng WebGL/Worker của bản web.
-  // Android dùng zoom; iOS dùng altitude. Cố định pitch=0 cho sơ đồ 2D.
   useEffect(() => {
+    if (navigation) {
+      map.current?.animateCamera(
+        {
+          center: navigation.coordinate,
+          pitch: 55,
+          heading: navigation.heading,
+          zoom: 18,
+          altitude: 500,
+        },
+        { duration: 900 },
+      );
+      return;
+    }
     if (route?.length) {
       map.current?.fitToCoordinates(route, {
         edgePadding: { top: 45, right: 40, bottom: 45, left: 40 },
@@ -50,7 +63,7 @@ export default function CampusMap({
       },
       { duration: 180 },
     );
-  }, [center, selectedId, route, places]);
+  }, [center, selectedId, route, places, navigation]);
 
   return (
     <MapView
@@ -66,7 +79,18 @@ export default function CampusMap({
             { latitude: campusBounds.north, longitude: campusBounds.east },
             { latitude: campusBounds.south, longitude: campusBounds.west },
           );
-        if (route?.length)
+        if (navigation)
+          map.current?.animateCamera(
+            {
+              center: navigation.coordinate,
+              pitch: 55,
+              heading: navigation.heading,
+              zoom: 18,
+              altitude: 500,
+            },
+            { duration: 900 },
+          );
+        else if (route?.length)
           map.current?.fitToCoordinates(route, {
             edgePadding: { top: 45, right: 40, bottom: 45, left: 40 },
             animated: false,
@@ -99,7 +123,13 @@ export default function CampusMap({
             { duration: 150 },
           );
       }}
-      initialCamera={{ center, pitch: 0, heading: 0, zoom: 16, altitude: 1100 }}
+      initialCamera={{
+        center: navigation?.coordinate ?? center,
+        pitch: navigation ? 55 : 0,
+        heading: navigation?.heading ?? 0,
+        zoom: navigation ? 18 : 16,
+        altitude: navigation ? 500 : 1100,
+      }}
       mapType="standard"
       showsBuildings={false}
       pitchEnabled={false}

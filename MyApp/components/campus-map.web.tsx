@@ -27,8 +27,6 @@ export default function CampusMap(props: CampusMapProps) {
     let instance: LeafletMap | undefined;
     let observer: ResizeObserver | undefined;
     let failedTiles = 0;
-    setReady(null);
-    setError("");
     // Leaflet chỉ cần DOM/SVG, không cần WebGL hoặc Worker. Import trong effect
     // giữ tương thích Expo static rendering (máy chủ không có window/document).
     void import("leaflet")
