@@ -168,42 +168,66 @@ export const notifications = [
     isRead: true,
   },
 ];
-export const days = [
-  'Thứ 2',
-  'Thứ 3',
-  'Thứ 4',
-  'Thứ 5',
-  'Thứ 6',
-  'Thứ 7',
-  'CN',
-];
-export const schedules = [
+export const days = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+export const upcomingEvents = [
   {
     id: 1,
-    subject: "Lập trình React Native",
-    room: "A101",
-    time: "07:30 - 09:30",
-    day: "Thứ 2",
+    title: 'Sinh hoạt CLB Tiếng Anh',
+    category: 'CLB',
+    date: '15/10/2026',
+    time: '17:00',
+    location: 'Phòng C201',
+    image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80',
+    isRegistered: false,
   },
   {
     id: 2,
-    subject: "Cơ sở dữ liệu",
-    room: "B203",
-    time: "09:45 - 11:45",
-    day: "Thứ 2",
+    title: 'Giao lưu văn nghệ chào sinh viên',
+    category: 'Hoạt động sinh viên',
+    date: '16/10/2026',
+    time: '19:00',
+    location: 'Sân khấu trung tâm',
+    image: 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?auto=format&fit=crop&w=600&q=80',
+    isRegistered: true,
+  },
+];
+
+export const latestNotifications = [
+  {
+    id: 1,
+    type: 'grade',
+    title: 'Điểm thi Lập trình Web đã được cập nhật',
+    content: 'Bạn đã đạt 8.2 điểm (B+). Xem chi tiết bảng điểm.',
+    time: '2 giờ trước',
+    isRead: false,
+  },
+  {
+    id: 2,
+    type: 'event',
+    title: 'Sự kiện mới: Workshop React Native',
+    content: 'Đăng ký ngay trước 26/09 để nhận quà tặng.',
+    time: '5 giờ trước',
+    isRead: false,
   },
   {
     id: 3,
-    subject: "Mạng máy tính",
-    room: "A305",
-    time: "13:30 - 15:30",
-    day: "Thứ 3",
-  },
-  {
-    id: 4,
-    subject: "Tiếng Anh chuyên ngành",
-    room: "B105",
-    time: "07:30 - 09:30",
-    day: "Thứ 4",
+    type: 'system',
+    title: 'Bảo trì hệ thống',
+    content: 'Hệ thống sẽ bảo trì từ 23:00 - 01:00 ngày 20/09.',
+    time: '1 ngày trước',
+    isRead: true,
   },
 ];
+
+export const defaultGrades = [
+  { code: 'TIN1023', subject: 'Lập trình Web', credits: 3, midterm: '8.0', final: '8.3', score10: '8.2', scoreLetter: 'B+', score4: '3.5', semester: 'HK1 (2026-2027)' },
+  { code: 'TIN1044', subject: 'Xử lý ảnh số', credits: 3, midterm: '8.5', final: '8.0', score10: '8.2', scoreLetter: 'B+', score4: '3.5', semester: 'HK1 (2026-2027)' },
+  { code: 'TIN1012', subject: 'Lập trình React Native', credits: 4, midterm: '9.0', final: '8.5', score10: '8.7', scoreLetter: 'A', score4: '3.8', semester: 'HK2 (2025-2026)' },
+  { code: 'TIN1015', subject: 'Cơ sở dữ liệu nâng cao', credits: 3, midterm: '7.5', final: '8.0', score10: '7.8', scoreLetter: 'B', score4: '3.0', semester: 'HK2 (2025-2026)' },
+  { code: 'TIN1008', subject: 'Mạng máy tính', credits: 3, midterm: '8.0', final: '7.5', score10: '7.7', scoreLetter: 'B', score4: '3.0', semester: 'HK2 (2025-2026)' },
+  { code: 'TIN1005', subject: 'Cấu trúc dữ liệu & Giải thuật', credits: 4, midterm: '8.5', final: '8.0', score10: '8.2', scoreLetter: 'B+', score4: '3.5', semester: 'HK1 (2025-2026)' },
+  { code: 'TOA1002', subject: 'Toán rời rạc', credits: 3, midterm: '7.0', final: '7.5', score10: '7.3', scoreLetter: 'B', score4: '3.0', semester: 'HK1 (2025-2026)' },
+  { code: 'NNU1001', subject: 'Tiếng Anh chuyên ngành', credits: 3, midterm: '8.5', final: '9.0', score10: '8.8', scoreLetter: 'A', score4: '3.8', semester: 'HK1 (2025-2026)' },
+];
+
+

@@ -1,20 +1,78 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors } from '@/constants/campus';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Mỗi file trong nhóm (tabs) là một màn hình trên thanh điều hướng.
+// 5 tab chính đúng như ảnh thiết kế: Trang chủ, Điểm, TKB, Bản đồ, Hồ sơ
 export default function TabLayout() {
-  return <Tabs screenOptions={{
-    headerShown: false, tabBarActiveTintColor: colors.primary,
-    tabBarInactiveTintColor: colors.muted, tabBarStyle: { backgroundColor: colors.card },
-    tabBarLabelStyle: { fontSize: 11 },
-  }}>
-    <Tabs.Screen name="home" options={{ title: 'Trang chủ', tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} /> }} />
-    <Tabs.Screen name="map" options={{ title: 'Bản đồ', tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" color={color} size={size} /> }} />
-    <Tabs.Screen name="schedule" options={{ title: 'Lịch', tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color} size={size} /> }} />
-    <Tabs.Screen name="events" options={{ title: 'Sự kiện', tabBarIcon: ({ color, size }) => <Ionicons name="ticket-outline" color={color} size={size} /> }} />
-    <Tabs.Screen name="profile" options={{ title: 'Cá nhân', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }} />
-    <Tabs.Screen name="explore" options={{ href: null }} />
-  </Tabs>;
-}
+  const insets = useSafeAreaInsets();
 
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#2563EB',
+        tabBarInactiveTintColor: '#64748B',
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#F1F5F9',
+          borderTopWidth: 1,
+          height: 68 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Trang chủ',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={22} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="grades"
+        options={{
+          title: 'Điểm',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} color={color} size={22} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="schedule"
+        options={{
+          title: 'TKB',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} color={color} size={22} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Bản đồ',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'map' : 'map-outline'} color={color} size={22} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Hồ sơ',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="events" options={{ href: null }} />
+      <Tabs.Screen name="explore" options={{ href: null }} />
+    </Tabs>
+  );
+}
