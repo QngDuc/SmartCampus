@@ -29,6 +29,7 @@
     "expo-linking": "~57.0.13",
     "expo-location": "~57.0.21",
     "expo-router": "~57.0.27",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",

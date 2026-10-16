@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 export function AuthLoadingOverlay({ visible, title }: { visible: boolean; title: string }) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (!visible) {

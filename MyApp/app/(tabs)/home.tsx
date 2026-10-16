@@ -52,7 +52,7 @@ export default function HomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Xem chi tiết GPA"
           style={styles.statCard}
-          onPress={() => router.push('/(tabs)/grades')}
+          onPress={() => router.push('./grades')}
         >
           <View style={styles.statTop}>
             <View style={styles.iconCircleBlue}>
@@ -68,7 +68,7 @@ export default function HomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Xem chi tiết Tín chỉ"
           style={styles.statCard}
-          onPress={() => router.push('/(tabs)/grades')}
+          onPress={() => router.push('./grades')}
         >
           <View style={styles.statTop}>
             <View style={styles.iconCircleGreen}>
@@ -123,7 +123,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Mở bảng điểm"
             style={styles.quickActionItem}
-            onPress={() => router.push('/(tabs)/grades')}
+            onPress={() => router.push('./grades')}
           >
             <View style={styles.actionIconCircle}>
               <Ionicons name="stats-chart-outline" size={22} color="#2563EB" />
@@ -189,7 +189,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Mở tính điểm GPA"
             style={styles.quickActionItem}
-            onPress={() => router.push('/(tabs)/grades')}
+            onPress={() => router.push('./grades')}
           >
             <View style={styles.actionIconCircle}>
               <Ionicons name="calculator-outline" size={22} color="#2563EB" />
@@ -288,7 +288,7 @@ export default function HomeScreen() {
               ]}
               onPress={() => {
                 if (item.type === 'grade') {
-                  router.push('/(tabs)/grades');
+                  router.push('./grades');
                 } else if (item.type === 'event') {
                   router.push('/(tabs)/events');
                 } else {
