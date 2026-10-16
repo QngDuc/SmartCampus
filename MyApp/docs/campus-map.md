@@ -3,7 +3,7 @@
 ## Hiển thị và tốc độ
 
 - Web dùng Leaflet 1.9.4 và ảnh nền OpenStreetMap, không cần WebGL, GPU hoặc Worker. Thư viện chỉ tải phía trình duyệt để hỗ trợ Expo static rendering.
-- Android/iOS giữ react-native-maps, cố định góc nhìn 2D, tắt nghiêng/xoay/nhà 3D.
+- Android/iOS dùng react-native-maps; chế độ xem sơ đồ giữ góc nhìn 2D. Mô phỏng điều hướng GPX bật camera nghiêng, xoay theo tuyến và nhà 3D trên SDK bản đồ native.
 - Mở bản đồ hiển thị toàn bộ các điểm trong khuôn viên. Chọn ghim/tên địa điểm để xem chi tiết và dẫn đường. Nút “Về trường” trở lại toàn cảnh.
 - Dữ liệu ghim nằm sẵn trong app, hiển thị không cần đợi ảnh nền. Danh sách ghim ổn định; tìm kiếm không tạo lại ghim. Khi chọn điểm chỉ cập nhật camera và màu ghim.
 - Chỉ tải ô ảnh nền trong vùng đang xem, giữ cache HTTP của trình duyệt và các ô lân cận. Không tải trước hàng loạt hoặc tải offline từ máy chủ tile công cộng.
@@ -27,10 +27,12 @@ Màn hình gồm hai ô chọn điểm xuất phát/đến, bản đồ chiếm 
 
 Đường và các nhánh tiếp cận chưa được khảo sát. Đây là **xem trước tuyến tham khảo**, chưa xác nhận có thể đi được, chưa có hướng dẫn rẽ theo thời gian thực hay giọng nói. Không dùng đường thẳng từ GPS đến tòa nhà. GPS hiện chỉ hiển thị vị trí khi nằm trong đa giác và độ chính xác tốt hơn 50 m; điểm xuất phát do người dùng chọn.
 
+Riêng Nhà số 7 có nút **Mô phỏng điều hướng 3D** để chạy thử tuyến KTX Lào → Nhà số 7 từ `gps-track/Track_Ktx_Laos_-_Nha_7.gpx`. Đường GPX được giản lược để vẽ nhẹ; vị trí trên màn hình chạy lần lượt theo tuyến mỗi 5 giây và được gắn nhãn DEMO, không đọc GPS hoặc đại diện cho hướng dẫn rẽ thật. Thẻ tuyến cũng hiển thị metadata trong tệp: thời điểm ghi 14/10/2026, 263 điểm GPS, thời lượng 4:23, tốc độ trung bình 3.35 km/h, tốc độ tối đa 6.3 km/h và cao độ GPS 423–425.9 m. Native dùng camera nghiêng 3D; bản web dùng Leaflet nên hiển thị chế độ xem 2D. Các nhánh nét đứt ước lượng đã được bỏ khỏi bản đồ; đường biên khuôn viên vẫn hiển thị bằng nét liền.
+
 Phạm vi đa giác được ước lượng từ ảnh, không phải ranh giới địa chính. Web dùng maxBounds, giới hạn zoom, giới hạn tile và che bên ngoài. Android dùng setMapBoundaries; iOS kiểm tra tâm camera sau thao tác. Cả hai native đều che bên ngoài đa giác. Đồ thị không có đường công cộng bên ngoài; các đoạn tuyến được kiểm tra không vượt đa giác. `npm run test:routes` kiểm tra 196 cặp điểm, chiều ngược, độ dài và phạm vi.
 
 ## Kiểm tra
 
-Chạy `npm run typecheck`, `npm run lint`, `npm run export:web`. Mở `npm run web` để kiểm tra chọn ghim, nhấn tên, tìm không dấu, về trường, mất mạng và GPS. Kiểm tra điện thoại bằng Expo Go. Bản Android riêng vẫn cần Google Maps API key theo https://docs.expo.dev/versions/v54.0.0/sdk/map-view/.
+Chạy `npm run typecheck`, `npm run lint`, `npm run export:web`. Mở `npm run web` để kiểm tra chọn ghim, nhấn tên, tìm không dấu, về trường, mất mạng và GPS. Kiểm tra điện thoại bằng Expo Go tương thích SDK 57. Bản Android riêng vẫn cần Google Maps API key theo https://docs.expo.dev/versions/v57.0.0/sdk/map-view/.
 
 Không còn MapLibre hoặc script chuẩn bị Worker. Nếu ảnh nền không tải, các ghim vẫn hiển thị và có nút thử tải lại ô ảnh. Nền bản đồ cần kết nối Internet. Tốc độ thực tế phụ thuộc mạng và thiết bị; dung lượng bundle không phải phép đo thời gian tải.

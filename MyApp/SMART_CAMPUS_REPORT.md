@@ -155,7 +155,7 @@ npm install
 npx expo start
 ```
 node_modules đã có nên có thể bỏ npm install trên máy hiện tại. Không thêm package mới.
-Trong terminal Expo, dùng a cho Android emulator hoặc w cho web; có thể quét QR bằng bản Expo Go tương thích SDK 54.
+Trong terminal Expo, dùng a cho Android emulator hoặc w cho web; có thể quét QR bằng bản Expo Go tương thích SDK 57.
 
 Kiểm tra:
 ```powershell
@@ -186,5 +186,5 @@ Checklist kiểm tra thủ công:
 10. Kiểm tra cuộn form khi mở bàn phím, màn hình nhỏ, xoay/kích thước web.
 
 Tài liệu đã đối chiếu theo AGENTS.md:
-- https://docs.expo.dev/versions/v54.0.0/
-- https://docs.expo.dev/versions/v54.0.0/sdk/router/
+- https://docs.expo.dev/versions/v57.0.0/
+- https://docs.expo.dev/versions/v57.0.0/sdk/router/

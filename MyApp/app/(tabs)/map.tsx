@@ -9,6 +9,12 @@ import {
 import { canRoute, findCampusRoute, insideCampus } from "@/data/campusRouting";
 import { locationImages } from "@/data/locationImages";
 import { locations } from "@/data/mockData";
+import {
+  getGpxHeading,
+  getRemainingGpxDistance,
+  gpxNavigationInfo,
+  gpxNavigationRoute,
+} from "@/data/gpxNavigation";
 import { showAlert } from "@/utils/feedback";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
@@ -49,12 +55,25 @@ export default function MapScreen() {
     locationId?: string;
     directions?: string;
   }>();
-  const [selectedId, setSelectedId] = useState<number>();
+  const requestedLocationId = Number(params.locationId);
+  const selectedId = locations.some(
+    (place) => place.id === requestedLocationId,
+  )
+    ? requestedLocationId
+    : undefined;
   const [originId, setOriginId] = useState(10);
-  const [center, setCenter] = useState(campusMap.center);
+  const [center, setCenter] = useState(() => {
+    const isSelectedPlace = locations.some(
+      (place) => place.id === requestedLocationId,
+    );
+    return isSelectedPlace && params.directions !== "0"
+      ? (locationCoordinates[requestedLocationId] ?? campusMap.center)
+      : campusMap.center;
+  });
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
   const [locating, setLocating] = useState(false);
-  const [showRoute, setShowRoute] = useState(false);
+  const showRoute = params.directions === "1";
+  const [navigationStep, setNavigationStep] = useState<number | null>(null);
   const [picker, setPicker] = useState<"origin" | "destination" | null>(null);
   const [search, setSearch] = useState("");
   const request = useRef(0);
@@ -64,17 +83,33 @@ export default function MapScreen() {
     },
     [],
   );
-  useEffect(() => {
-    const id = Number(params.locationId);
-    if (!locations.some((place) => place.id === id)) return;
-    setSelectedId(id);
-    if (params.directions !== "0")
-      setCenter(locationCoordinates[id] ?? campusMap.center);
-    setShowRoute(params.directions === "1");
-  }, [params.locationId, params.directions]);
-
   const selected = locations.find((place) => place.id === selectedId);
   const origin = locations.find((place) => place.id === originId)!;
+  const navigationActive = navigationStep !== null;
+  const navigationCoordinate =
+    navigationStep === null ? undefined : gpxNavigationRoute[navigationStep];
+  const remainingDistance =
+    navigationStep === null ? 0 : getRemainingGpxDistance(navigationStep);
+  const remainingMinutes = Math.ceil(remainingDistance / 75);
+  const navigationCamera = useMemo(
+    () =>
+      navigationCoordinate && navigationStep !== null
+        ? {
+            coordinate: navigationCoordinate,
+            heading: getGpxHeading(navigationStep),
+          }
+        : undefined,
+    [navigationCoordinate, navigationStep],
+  );
+  useEffect(() => {
+    if (!navigationActive) return;
+    const timer = setInterval(() => {
+      setNavigationStep((step) =>
+        step === null || step >= gpxNavigationRoute.length - 1 ? step : step + 1,
+      );
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [navigationActive]);
   // Tính đường trên đồ thị nội bộ trong bộ nhớ, không đợi API định tuyến.
   const route = useMemo(
     () =>
@@ -90,9 +125,8 @@ export default function MapScreen() {
   );
 
   function selectPlace(id: number) {
-    setSelectedId(id);
+    setNavigationStep(null);
     setCenter(locationCoordinates[id] ?? campusMap.center);
-    setShowRoute(false);
     router.setParams({ locationId: String(id), directions: "0" });
   }
   function openPicker(mode: "origin" | "destination") {
@@ -144,7 +178,6 @@ export default function MapScreen() {
         longitude: position.coords.longitude,
       });
       // Chỉ hiển thị GPS. Không tự nối GPS tới đường bằng đoạn thẳng qua tòa nhà.
-      setShowRoute(false);
       router.setParams({ directions: "0" });
     } catch {
       if (request.current === id)
@@ -164,99 +197,180 @@ export default function MapScreen() {
         <CampusMap
           center={center}
           places={
-            category === "Tất cả"
-              ? places
-              : places.filter(
-                  (p) =>
-                    locations.find((l) => l.id === p.id)?.category === category,
-                )
+            navigationActive
+              ? []
+              : category === "Tất cả"
+                ? places
+                : places.filter(
+                    (p) =>
+                      locations.find((l) => l.id === p.id)?.category ===
+                      category,
+                  )
           }
-          selectedId={selectedId}
-          userLocation={userLocation}
+          selectedId={navigationActive ? undefined : selectedId}
+          userLocation={navigationActive ? null : userLocation}
           onSelect={selectPlace}
-          route={route?.points}
+          route={navigationActive ? gpxNavigationRoute : route?.points}
+          navigation={navigationCamera}
         />
-        <View style={styles.controls}>
-          <Pressable
-            style={styles.round}
-            accessibilityRole="button"
-            accessibilityLabel="Vị trí của tôi"
-            disabled={locating}
-            onPress={locate}
-          >
-            <Ionicons
-              name={locating ? "hourglass-outline" : "locate"}
-              size={23}
-              color={colors.primary}
-            />
-          </Pressable>
-          <Pressable
-            style={styles.round}
-            accessibilityRole="button"
-            accessibilityLabel="Xem toàn trường"
-            onPress={() => {
-              setCenter({ ...campusMap.center });
-              setSelectedId(undefined);
-              setShowRoute(false);
-              router.setParams({ locationId: "", directions: "0" });
-            }}
-          >
-            <Ionicons name="school-outline" size={23} color={colors.primary} />
-          </Pressable>
-        </View>
-      </View>
-
-      <View
-        style={[styles.topBar, { left: wide && selected ? 424 : 16 }]}
-        pointerEvents="box-none"
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Tìm kiếm địa điểm trong trường"
-          style={styles.searchBar}
-          onPress={() => openPicker("destination")}
-        >
-          <Ionicons name="menu" size={23} color="#5F6368" />
-          <Text style={styles.fieldText} numberOfLines={1}>
-            {selected?.name ?? "Tìm kiếm trong khuôn viên"}
-          </Text>
-          <Ionicons name="search" size={23} color="#5F6368" />
-        </Pressable>
-        {wide && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ gap: 8, alignItems: "center" }}
-          >
-            {[
-              "Tất cả",
-              "Học tập",
-              "Giảng đường",
-              "Tiện ích",
-              "Thể thao",
-              "Cổng trường",
-            ].map((item) => (
-              <Pressable
-                key={item}
-                accessibilityRole="button"
-                accessibilityState={{ selected: category === item }}
-                onPress={() => setCategory(item)}
-                style={[styles.chip, category === item && styles.activeChip]}
-              >
-                <Text
-                  style={{
-                    color: category === item ? "#007C91" : "#3C4043",
-                    fontWeight: "600",
-                  }}
-                >
-                  {item}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+        {!navigationActive && (
+          <View style={styles.controls}>
+            <Pressable
+              style={styles.round}
+              accessibilityRole="button"
+              accessibilityLabel="Vị trí của tôi"
+              disabled={locating}
+              onPress={locate}
+            >
+              <Ionicons
+                name={locating ? "hourglass-outline" : "locate"}
+                size={23}
+                color={colors.primary}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.round}
+              accessibilityRole="button"
+              accessibilityLabel="Xem toàn trường"
+              onPress={() => {
+                setCenter({ ...campusMap.center });
+                setNavigationStep(null);
+                router.setParams({ locationId: "", directions: "0" });
+              }}
+            >
+              <Ionicons
+                name="school-outline"
+                size={23}
+                color={colors.primary}
+              />
+            </Pressable>
+          </View>
         )}
       </View>
+
+      {navigationActive ? (
+        <>
+          <View style={styles.navigationHeader}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Thoát mô phỏng chỉ đường"
+              style={styles.navigationBack}
+              onPress={() => setNavigationStep(null)}
+            >
+              <Ionicons name="close" size={23} color="#202124" />
+            </Pressable>
+            <View style={styles.navigationHeaderText}>
+              <Text style={styles.navigationInstruction} numberOfLines={1}>
+                {remainingDistance === 0
+                  ? "Bạn đã đến Nhà số 7"
+                  : "Tiếp tục đi theo tuyến"}
+              </Text>
+              <Text style={styles.navigationDestination} numberOfLines={1}>
+                KTX Lào  →  Nhà số 7
+              </Text>
+            </View>
+            <View style={styles.demoBadge}>
+              <Text style={styles.demoBadgeText}>DEMO</Text>
+            </View>
+          </View>
+          <View style={styles.navigationSheet}>
+            <View style={styles.navigationSummary}>
+              <Ionicons name="navigate" size={25} color="#1A73E8" />
+              <View style={styles.navigationSummaryText}>
+                <Text style={styles.navigationDistance}>
+                  {remainingDistance === 0
+                    ? "Đã đến nơi"
+                    : `Còn ${remainingDistance} m`}
+                </Text>
+                <Text style={styles.navigationMeta}>
+                  {remainingDistance === 0
+                    ? "Nhà số 7"
+                    : `Đi bộ · khoảng ${remainingMinutes} phút`}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${
+                      ((navigationStep ?? 0) /
+                        (gpxNavigationRoute.length - 1)) *
+                      100
+                    }%`,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.demoNotice}>
+              Mô phỏng theo tuyến GPX đã ghi · Không dùng GPS trực tiếp
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.endNavigationButton}
+              onPress={() => setNavigationStep(null)}
+            >
+              <Text style={styles.endNavigationText}>Kết thúc mô phỏng</Text>
+            </Pressable>
+          </View>
+        </>
+      ) : (
+        <>
+          <View
+            style={[styles.topBar, { left: wide && selected ? 424 : 16 }]}
+            pointerEvents="box-none"
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Tìm kiếm địa điểm trong trường"
+              style={styles.searchBar}
+              onPress={() => openPicker("destination")}
+            >
+              <Ionicons name="menu" size={23} color="#5F6368" />
+              <Text style={styles.fieldText} numberOfLines={1}>
+                {selected?.name ?? "Tìm kiếm trong khuôn viên"}
+              </Text>
+              <Ionicons name="search" size={23} color="#5F6368" />
+            </Pressable>
+            {wide && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ gap: 8, alignItems: "center" }}
+              >
+                {[
+                  "Tất cả",
+                  "Học tập",
+                  "Giảng đường",
+                  "Tiện ích",
+                  "Thể thao",
+                  "Cổng trường",
+                ].map((item) => (
+                  <Pressable
+                    key={item}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: category === item }}
+                    onPress={() => setCategory(item)}
+                    style={[
+                      styles.chip,
+                      category === item && styles.activeChip,
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: category === item ? "#007C91" : "#3C4043",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {item}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+          </View>
       {selected && (
         <View
           style={[
@@ -284,8 +398,6 @@ export default function MapScreen() {
                 accessibilityLabel="Đóng chi tiết địa điểm"
                 style={styles.closeDetail}
                 onPress={() => {
-                  setSelectedId(undefined);
-                  setShowRoute(false);
                   router.setParams({ locationId: "", directions: "0" });
                 }}
               >
@@ -307,7 +419,6 @@ export default function MapScreen() {
                 disabled={!canRoute(selected.id)}
                 style={styles.action}
                 onPress={() => {
-                  setShowRoute(true);
                   router.setParams({ directions: "1" });
                 }}
               >
@@ -380,16 +491,57 @@ export default function MapScreen() {
               {showRoute && (
                 <View style={styles.routeCard}>
                   <Text style={styles.routeTitle}>
-                    {route
-                      ? `${route.minutes} phút · ${route.meters} m`
-                      : "Chưa có tuyến đi bộ phù hợp"}
+                    {selected.id === 7
+                      ? `${Math.ceil(getRemainingGpxDistance(0) / 75)} phút · ${getRemainingGpxDistance(0)} m`
+                      : route
+                        ? `${route.minutes} phút · ${route.meters} m`
+                        : "Chưa có tuyến đi bộ phù hợp"}
                   </Text>
                   <Text style={styles.infoText}>
-                    {origin.name} → {selected.name}
+                    {selected.id === 7
+                      ? "KTX Lào → Nhà số 7"
+                      : `${origin.name} → ${selected.name}`}
                   </Text>
                   <Text style={styles.notice}>
-                    Tuyến tham khảo theo sơ đồ, chưa khảo sát lối đi thực tế.
+                    {selected.id === 7
+                      ? "Tuyến GPS đã ghi, dùng để chạy thử mô phỏng; chưa có chỉ dẫn rẽ hoặc định vị trực tiếp."
+                      : "Tuyến tham khảo theo sơ đồ, chưa khảo sát lối đi thực tế."}
                   </Text>
+                  {selected.id === 7 && (
+                    <>
+                      <Text style={styles.gpxDetails}>
+                        Ghi ngày {gpxNavigationInfo.recordedAt} ·{" "}
+                        {gpxNavigationInfo.recordedPointCount} điểm GPS ·{" "}
+                        {Math.floor(
+                          gpxNavigationInfo.recordedDurationSeconds / 60,
+                        )}
+                        :
+                        {String(
+                          gpxNavigationInfo.recordedDurationSeconds % 60,
+                        ).padStart(2, "0")}
+                      </Text>
+                      <Text style={styles.gpxDetails}>
+                        Tốc độ TB{" "}
+                        {gpxNavigationInfo.averageSpeedKmh.toFixed(1)} km/h ·
+                        tối đa {gpxNavigationInfo.maximumSpeedKmh.toFixed(1)}{" "}
+                        km/h
+                      </Text>
+                      <Text style={styles.gpxDetails}>
+                        Độ cao GPS: {gpxNavigationInfo.minimumElevationMeters}–
+                        {gpxNavigationInfo.maximumElevationMeters} m
+                      </Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        style={styles.startNavigationButton}
+                        onPress={() => setNavigationStep(0)}
+                      >
+                        <Ionicons name="navigate" size={19} color="#fff" />
+                        <Text style={styles.startNavigationText}>
+                          Mô phỏng điều hướng 3D
+                        </Text>
+                      </Pressable>
+                    </>
+                  )}
                 </View>
               )}
             </View>
@@ -442,7 +594,6 @@ export default function MapScreen() {
                   onPress={() => {
                     if (picker === "origin") {
                       setOriginId(place.id);
-                      setShowRoute(true);
                       router.setParams({ directions: "1" });
                     } else selectPlace(place.id);
                     setPicker(null);
@@ -467,6 +618,8 @@ export default function MapScreen() {
           </SafeAreaView>
         </View>
       </Modal>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -575,6 +728,84 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 8,
   },
+  startNavigationButton: {
+    marginTop: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 24,
+    backgroundColor: "#1A73E8",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  startNavigationText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  gpxDetails: { color: "#3C4043", fontSize: 13, lineHeight: 19 },
+  navigationHeader: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    right: 12,
+    zIndex: 25,
+    minHeight: 68,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 10,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    elevation: 8,
+    boxShadow: "0px 3px 12px #0003",
+  },
+  navigationBack: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navigationHeaderText: { flex: 1, gap: 4 },
+  navigationInstruction: { fontSize: 16, fontWeight: "700", color: "#202124" },
+  navigationDestination: { fontSize: 12, color: "#5F6368" },
+  demoBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#E8F0FE",
+  },
+  demoBadgeText: { color: "#1A73E8", fontWeight: "800", fontSize: 10 },
+  navigationSheet: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 12,
+    zIndex: 25,
+    padding: 18,
+    gap: 12,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    elevation: 8,
+    boxShadow: "0px 3px 12px #0003",
+  },
+  navigationSummary: { flexDirection: "row", alignItems: "center", gap: 14 },
+  navigationSummaryText: { gap: 3 },
+  navigationDistance: { color: "#202124", fontSize: 22, fontWeight: "800" },
+  navigationMeta: { color: "#5F6368", fontSize: 14 },
+  progressTrack: {
+    height: 5,
+    borderRadius: 3,
+    overflow: "hidden",
+    backgroundColor: "#DDE3EA",
+  },
+  progressFill: { height: "100%", backgroundColor: "#1A73E8" },
+  demoNotice: { fontSize: 12, color: "#64748B" },
+  endNavigationButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    borderRadius: 24,
+    backgroundColor: "#F1F3F4",
+  },
+  endNavigationText: { color: "#3C4043", fontWeight: "700" },
   routeTitle: { color: "#007C91", fontSize: 18, fontWeight: "700" },
   page: { flex: 1, backgroundColor: "#F8FAFC" },
   header: {

@@ -13,11 +13,24 @@ export default function CampusMap({
   userLocation,
   onSelect,
   route,
+  navigation,
 }: CampusMapProps) {
   const map = useRef<MapView>(null);
   // Native dùng SDK bản đồ của hệ điều hành, không dùng WebGL/Worker của bản web.
-  // Android dùng zoom; iOS dùng altitude. Cố định pitch=0 cho sơ đồ 2D.
   useEffect(() => {
+    if (navigation) {
+      map.current?.animateCamera(
+        {
+          center: navigation.coordinate,
+          pitch: 65,
+          heading: navigation.heading,
+          zoom: 19,
+          altitude: 220,
+        },
+        { duration: 800 },
+      );
+      return;
+    }
     if (route?.length) {
       map.current?.fitToCoordinates(route, {
         edgePadding: { top: 45, right: 40, bottom: 45, left: 40 },
@@ -50,7 +63,7 @@ export default function CampusMap({
       },
       { duration: 180 },
     );
-  }, [center, selectedId, route, places]);
+  }, [center, selectedId, route, places, navigation]);
 
   return (
     <MapView
@@ -66,7 +79,15 @@ export default function CampusMap({
             { latitude: campusBounds.north, longitude: campusBounds.east },
             { latitude: campusBounds.south, longitude: campusBounds.west },
           );
-        if (route?.length)
+        if (navigation)
+          map.current?.animateCamera({
+            center: navigation.coordinate,
+            pitch: 65,
+            heading: navigation.heading,
+            zoom: 19,
+            altitude: 220,
+          });
+        else if (route?.length)
           map.current?.fitToCoordinates(route, {
             edgePadding: { top: 45, right: 40, bottom: 45, left: 40 },
             animated: false,
@@ -101,9 +122,9 @@ export default function CampusMap({
       }}
       initialCamera={{ center, pitch: 0, heading: 0, zoom: 16, altitude: 1100 }}
       mapType="standard"
-      showsBuildings={false}
-      pitchEnabled={false}
-      rotateEnabled={false}
+      showsBuildings={!!navigation}
+      pitchEnabled={!!navigation}
+      rotateEnabled={!!navigation}
       showsCompass
       showsScale
       toolbarEnabled={false}
@@ -143,6 +164,13 @@ export default function CampusMap({
       {!!route?.length && (
         <Polyline coordinates={route} strokeColor="#2563EB" strokeWidth={6} />
       )}
+      {navigation && route && route.length > 1 && (
+        <Marker
+          coordinate={route[route.length - 1]}
+          title="Nhà số 7"
+          pinColor="#DC2626"
+        />
+      )}
       {places.map((place) => (
         <Marker
           key={place.id}
@@ -169,6 +197,16 @@ export default function CampusMap({
           coordinate={route[0]}
           title="Điểm xuất phát"
           pinColor="#2563EB"
+        />
+      )}
+      {navigation && (
+        <Marker
+          coordinate={navigation.coordinate}
+          title="Vị trí mô phỏng"
+          description="Đang chạy thử trên tuyến GPX"
+          pinColor="#2563EB"
+          flat
+          rotation={navigation.heading}
         />
       )}
     </MapView>

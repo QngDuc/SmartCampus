@@ -3,7 +3,7 @@ import type { CircleMarker, Map as LeafletMap, TileLayer } from "leaflet";
 // CSS Leaflet giữ nguyên bố cục, bỏ icon bitmap không dùng vì Metro chưa hỗ trợ URL tương đối trong CSS.
 import "@/assets/styles/leaflet.css";
 import { campusMap } from "@/data/campusMap";
-import { campusBoundary, campusBounds, walkways } from "@/data/campusRouting";
+import { campusBoundary, campusBounds } from "@/data/campusRouting";
 import type { CampusMapProps } from "./campus-map.types";
 
 export default function CampusMap(props: CampusMapProps) {
@@ -27,8 +27,6 @@ export default function CampusMap(props: CampusMapProps) {
     let instance: LeafletMap | undefined;
     let observer: ResizeObserver | undefined;
     let failedTiles = 0;
-    setReady(null);
-    setError("");
     // Leaflet chỉ cần DOM/SVG, không cần WebGL hoặc Worker. Import trong effect
     // giữ tương thích Expo static rendering (máy chủ không có window/document).
     void import("leaflet")
@@ -105,20 +103,8 @@ export default function CampusMap(props: CampusMapProps) {
           color: "#15803D",
           weight: 2,
           fill: false,
-          dashArray: "6 5",
           interactive: false,
         }).addTo(instance);
-        walkways.forEach((segment) =>
-          L.polyline(
-            segment.map((p) => [p.latitude, p.longitude]),
-            {
-              color: "#94A3B8",
-              weight: 3,
-              dashArray: "5 6",
-              interactive: false,
-            },
-          ).addTo(instance!),
-        );
         L.control.scale({ imperial: false }).addTo(instance);
         if (typeof ResizeObserver !== "undefined") {
           observer = new ResizeObserver(() =>
@@ -274,6 +260,28 @@ export default function CampusMap(props: CampusMapProps) {
       layer.remove();
     };
   }, [props.route, ready]);
+
+  useEffect(() => {
+    const L = library.current;
+    const instance = map.current;
+    if (!ready || !L || !instance || !props.navigation) return;
+    const { coordinate } = props.navigation;
+    const marker = L.circleMarker([coordinate.latitude, coordinate.longitude], {
+      radius: 10,
+      color: "#fff",
+      fillColor: "#2563EB",
+      fillOpacity: 1,
+      weight: 4,
+    })
+      .bindTooltip("Vị trí mô phỏng")
+      .addTo(instance);
+    instance.setView([coordinate.latitude, coordinate.longitude], 18, {
+      animate: true,
+    });
+    return () => {
+      marker.remove();
+    };
+  }, [props.navigation, ready]);
 
   useEffect(() => {
     const L = library.current;
