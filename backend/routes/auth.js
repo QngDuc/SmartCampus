@@ -143,6 +143,7 @@ router.post('/login', async (req, res) => {
     }
 
     user.lastLogin = new Date();
+    user.lastSeen = user.lastLogin;
     await user.save();
 
     return res.json({ user: publicUser(user), token: issueToken(user) });
@@ -153,10 +154,20 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
+  // Log để kiểm tra app có gửi nhịp /me hay không (xóa sau khi test xong)
+  console.log('[/me] heartbeat', req.userId, new Date().toISOString());
   try {
     const user = await User.findById(req.userId);
     if (!user) {
       return res.status(401).json({ code: 'ACCOUNT_DELETED', message: DELETED_MESSAGE });
+    }
+    const result = await User.updateOne(
+      { _id: user._id },
+      { $set: { lastSeen: new Date() } },
+      { timestamps: false }
+    );
+    if (!result.matchedCount) {
+      console.warn('[/me] không ghi được lastSeen cho', req.userId);
     }
     return res.json({ user: publicUser(user) });
   } catch (error) {
