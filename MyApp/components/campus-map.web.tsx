@@ -294,6 +294,24 @@ export default function CampusMap(props: CampusMapProps) {
     };
   }, [props.userLocation, ready]);
 
+  useEffect(() => {
+    const L = library.current;
+    const instance = map.current;
+    if (!ready || !L || !instance || !props.navigation) return;
+    const { latitude, longitude } = props.navigation.coordinate;
+    const marker = L.circleMarker([latitude, longitude], {
+      radius: 9,
+      color: "#fff",
+      weight: 3,
+      fillColor: "#1A73E8",
+      fillOpacity: 1,
+    }).addTo(instance);
+    instance.panTo([latitude, longitude], { animate: true });
+    return () => {
+      marker.remove();
+    };
+  }, [props.navigation, ready]);
+
   return (
     <div
       style={{

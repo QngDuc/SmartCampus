@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import MapView, { Marker, Polygon, Polyline } from "react-native-maps";
 import { campusBoundary, campusBounds } from "@/data/campusRouting";
 import { colors } from "@/constants/campus";
@@ -200,6 +201,31 @@ export default function CampusMap({
           title="Điểm xuất phát"
           pinColor="#2563EB"
         />
+      )}
+      {navigation && (
+        <Marker
+          coordinate={navigation.coordinate}
+          anchor={{ x: 0.5, y: 0.5 }}
+          flat
+          rotation={navigation.heading}
+          tracksViewChanges={false}
+          zIndex={10}
+        >
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: "#fff",
+              borderWidth: 2,
+              borderColor: "#1A73E8",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="arrow-up" size={20} color="#1A73E8" />
+          </View>
+        </Marker>
       )}
     </MapView>
   );
