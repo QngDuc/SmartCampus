@@ -1,21 +1,40 @@
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen } from '@/components/campus-ui';
 import { useAuth } from '@/components/auth-provider';
-import { calculateGpa, parseCourseGrades } from '@/utils/academic';
+import { calculateGpa, classifyGpa, parseCourseGrades } from '@/utils/academic';
 import {
   upcomingEvents,
   latestNotifications,
 } from '@/data/mockData';
+
+type QuickAction = {
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  route: Href;
+  tint: string;
+  color: string;
+  badge?: number;
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { label: 'Điểm', icon: 'stats-chart-outline', route: '/(tabs)/grades', tint: '#EFF6FF', color: '#2563EB' },
+  { label: 'TKB', icon: 'calendar-outline', route: '/(tabs)/schedule', tint: '#F0FDF4', color: '#16A34A' },
+  { label: 'Bản đồ', icon: 'map-outline', route: '/(tabs)/map', tint: '#FFFBEB', color: '#D97706' },
+  { label: 'Sự kiện', icon: 'megaphone-outline', route: '/(tabs)/events', tint: '#F5F3FF', color: '#7C3AED' },
+  { label: 'Thông báo', icon: 'notifications-outline', route: '/notifications', tint: '#FFF1F2', color: '#E11D48', badge: 3 },
+  { label: 'GPA', icon: 'calculator-outline', route: '/(tabs)/grades', tint: '#ECFEFF', color: '#0891B2' },
+];
 
 export default function HomeScreen() {
   const { user, grades, timetable, isSyncing } = useAuth();
@@ -24,24 +43,52 @@ export default function HomeScreen() {
   const todayName = weekdays[new Date().getDay()];
   const todayLessons = timetable?.schedules.filter(item => item.day === todayName) ?? [];
   const nextLesson = todayLessons[0];
+  // Lớp: chỉ hiển thị nếu dữ liệu user có trường này (đổi tên trường cho khớp với model của bạn)
+  const className = (user as { className?: string } | null)?.className;
+
+  // Chia thao tác nhanh thành các hàng 4 cột, hàng cuối được bù ô trống để căn đều
+  const actionRows: (QuickAction | null)[][] = [];
+  for (let i = 0; i < QUICK_ACTIONS.length; i += 4) {
+    const row: (QuickAction | null)[] = QUICK_ACTIONS.slice(i, i + 4);
+    while (row.length < 4) row.push(null);
+    actionRows.push(row);
+  }
 
   return (
     <Screen>
-      {/* 1. LỜI CHÀO & AVATAR SINH VIÊN */}
-      <View style={styles.headerRow}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greetingText}>Xin chào 👋</Text>
-          <Text style={styles.userName}>{user?.name ?? 'Sinh viên'}</Text>
-          <Text style={styles.studentCode}>{user?.studentId ?? ''}</Text>
+      {/* 1. THẺ SINH VIÊN */}
+      <View style={styles.heroCard}>
+        {/* Họa tiết nhẹ, bị cắt theo góc bo của thẻ */}
+        <View style={styles.heroDecorClip} pointerEvents="none">
+          <View style={styles.heroDecorLarge} />
+          <View style={styles.heroDecorSmall} />
         </View>
+
+        <Text style={styles.greetingText}>Xin chào 👋</Text>
 
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Mở hồ sơ cá nhân"
-          style={styles.avatarButton}
+          style={({ pressed }) => [styles.heroRow, pressed && styles.pressed]}
           onPress={() => router.navigate('/(tabs)/profile')}
         >
-          <Text style={styles.avatarLetter}>{user?.name.trim().charAt(0).toUpperCase() ?? '?'}</Text>
+          <View style={styles.avatarButton}>
+            <Text style={styles.avatarLetter}>
+              {user?.name?.trim().charAt(0).toUpperCase() ?? '?'}
+            </Text>
+          </View>
+
+          <View style={styles.studentInfo}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {user?.name ?? 'Sinh viên'}
+            </Text>
+            <Text style={styles.studentCode}>MSV: {user?.studentId ?? '—'}</Text>
+            {className ? <Text style={styles.studentCode}>Lớp: {className}</Text> : null}
+          </View>
+
+          <View style={styles.chevronCircle}>
+            <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+          </View>
         </Pressable>
       </View>
 
@@ -51,32 +98,46 @@ export default function HomeScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Xem chi tiết GPA"
-          style={styles.statCard}
+          style={({ pressed }) => [styles.statCard, pressed && styles.pressed]}
           onPress={() => router.push('/(tabs)/grades')}
         >
           <View style={styles.statTop}>
             <View style={styles.iconCircleBlue}>
-              <Ionicons name="school" size={17} color="#2563EB" />
+              <Ionicons name="school" size={18} color="#2563EB" />
             </View>
             <Text style={styles.statLabel}>GPA</Text>
           </View>
-          <Text style={styles.statValue}>{gradeSummary.gpa === null ? '—' : gradeSummary.gpa.toFixed(2)}</Text>
+          <Text style={styles.statValue}>
+            {gradeSummary.gpa === null ? '—' : gradeSummary.gpa.toFixed(2)}
+          </Text>
+          <Text style={styles.statCaption}>
+            {gradeSummary.gpa !== null
+              ? `Xếp loại ${classifyGpa(gradeSummary.gpa)}`
+              : isSyncing
+                ? 'Đang đồng bộ điểm…'
+                : grades
+                  ? 'Chưa đọc được điểm chữ'
+                  : 'Chưa có dữ liệu điểm'}
+          </Text>
         </Pressable>
 
         {/* Thẻ Tín chỉ */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Xem chi tiết Tín chỉ"
-          style={styles.statCard}
+          style={({ pressed }) => [styles.statCard, pressed && styles.pressed]}
           onPress={() => router.push('/(tabs)/grades')}
         >
           <View style={styles.statTop}>
             <View style={styles.iconCircleGreen}>
-              <Ionicons name="ribbon-outline" size={17} color="#16A34A" />
+              <Ionicons name="ribbon-outline" size={18} color="#16A34A" />
             </View>
             <Text style={styles.statLabel}>Tín chỉ</Text>
           </View>
-          <Text style={styles.statValue}>{gradeSummary.gpa === null ? '—' : gradeSummary.earnedCredits}</Text>
+          <Text style={styles.statValue}>
+            {gradeSummary.gpa === null ? '—' : gradeSummary.earnedCredits}
+          </Text>
+          <Text style={styles.statCaption}>Số tín chỉ đã tích lũy</Text>
         </Pressable>
       </View>
 
@@ -88,7 +149,7 @@ export default function HomeScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Mở thời khóa biểu hôm nay"
-        style={styles.todayCard}
+        style={({ pressed }) => [styles.todayCard, pressed && styles.pressed]}
         onPress={() => router.push('/(tabs)/schedule')}
       >
         <View style={styles.yellowIndicator} />
@@ -101,12 +162,23 @@ export default function HomeScreen() {
           <>
             <View style={styles.todayTimeCol}>
               <Text style={styles.todayTimeStart}>{nextLesson?.session ?? 'Hôm nay'}</Text>
-              <Text style={styles.todayTimeEnd}>{nextLesson?.period ? `Tiết ${nextLesson.period}` : ''}</Text>
+              <Text style={styles.todayTimeEnd}>
+                {nextLesson?.period ? `Tiết ${nextLesson.period}` : ''}
+              </Text>
             </View>
             <View style={styles.todayContentCol}>
-              <Text style={styles.todaySubject}>{nextLesson?.subject ?? 'Không có lịch học hôm nay'}</Text>
-              <Text style={styles.todayLocation}>{nextLesson ? `Phòng ${nextLesson.room || 'chưa cập nhật'}` : timetable ? 'Thời khóa biểu đã được đồng bộ' : 'Chưa có dữ liệu thời khóa biểu'}</Text>
+              <Text style={styles.todaySubject} numberOfLines={2}>
+                {nextLesson?.subject ?? 'Không có lịch học hôm nay'}
+              </Text>
+              <Text style={styles.todayLocation}>
+                {nextLesson
+                  ? `Phòng ${nextLesson.room || 'chưa cập nhật'}`
+                  : timetable
+                    ? 'Thời khóa biểu đã được đồng bộ'
+                    : 'Chưa có dữ liệu thời khóa biểu'}
+              </Text>
             </View>
+            <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
           </>
         )}
       </Pressable>
@@ -117,90 +189,36 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.quickActionsContainer}>
-        {/* Hàng 1: Điểm, TKB, Bản đồ, Sự kiện */}
-        <View style={styles.quickActionsRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mở bảng điểm"
-            style={styles.quickActionItem}
-            onPress={() => router.push('/(tabs)/grades')}
+        {actionRows.map((row, rowIndex) => (
+          <View
+            key={rowIndex}
+            style={[styles.quickActionsRow, rowIndex > 0 && styles.quickActionsRowGap]}
           >
-            <View style={styles.actionIconCircle}>
-              <Ionicons name="stats-chart-outline" size={22} color="#2563EB" />
-            </View>
-            <Text style={styles.actionLabel}>Điểm</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mở thời khóa biểu"
-            style={styles.quickActionItem}
-            onPress={() => router.push('/(tabs)/schedule')}
-          >
-            <View style={styles.actionIconCircle}>
-              <Ionicons name="calendar-outline" size={22} color="#2563EB" />
-            </View>
-            <Text style={styles.actionLabel}>TKB</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mở bản đồ trường"
-            style={styles.quickActionItem}
-            onPress={() => router.push('/(tabs)/map')}
-          >
-            <View style={styles.actionIconCircle}>
-              <Ionicons name="map-outline" size={22} color="#2563EB" />
-            </View>
-            <Text style={styles.actionLabel}>Bản đồ</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mở sự kiện"
-            style={styles.quickActionItem}
-            onPress={() => router.push('/(tabs)/events')}
-          >
-            <View style={styles.actionIconCircle}>
-              <Ionicons name="megaphone-outline" size={22} color="#2563EB" />
-            </View>
-            <Text style={styles.actionLabel}>Sự kiện</Text>
-          </Pressable>
-        </View>
-
-        {/* Hàng 2: Thông báo, GPA */}
-        <View style={[styles.quickActionsRow, { marginTop: 16 }]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mở thông báo"
-            style={styles.quickActionItem}
-            onPress={() => router.push('/notifications')}
-          >
-            <View style={styles.actionIconCircle}>
-              <Ionicons name="notifications-outline" size={22} color="#2563EB" />
-              <View style={styles.badgeCountCircle}>
-                <Text style={styles.badgeCountText}>3</Text>
-              </View>
-            </View>
-            <Text style={styles.actionLabel}>Thông báo</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mở tính điểm GPA"
-            style={styles.quickActionItem}
-            onPress={() => router.push('/(tabs)/grades')}
-          >
-            <View style={styles.actionIconCircle}>
-              <Ionicons name="calculator-outline" size={22} color="#2563EB" />
-            </View>
-            <Text style={styles.actionLabel}>GPA</Text>
-          </Pressable>
-
-          {/* Giữ chỗ căn đều 4 cột */}
-          <View style={styles.quickActionItem} />
-          <View style={styles.quickActionItem} />
-        </View>
+            {row.map((action, colIndex) =>
+              action ? (
+                <Pressable
+                  key={action.label}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Mở ${action.label}`}
+                  style={({ pressed }) => [styles.quickActionItem, pressed && styles.pressed]}
+                  onPress={() => router.push(action.route)}
+                >
+                  <View style={[styles.actionIconCircle, { backgroundColor: action.tint }]}>
+                    <Ionicons name={action.icon} size={22} color={action.color} />
+                    {action.badge ? (
+                      <View style={styles.badgeCountCircle}>
+                        <Text style={styles.badgeCountText}>{action.badge}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.actionLabel}>{action.label}</Text>
+                </Pressable>
+              ) : (
+                <View key={`empty-${colIndex}`} style={styles.quickActionItem} />
+              ),
+            )}
+          </View>
+        ))}
       </View>
 
       {/* 5. SỰ KIỆN SẮP TỚI */}
@@ -219,13 +237,14 @@ export default function HomeScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.eventsScrollContainer}
+        style={styles.eventsScroll}
       >
         {upcomingEvents.map(event => (
           <Pressable
             key={event.id}
             accessibilityRole="button"
             accessibilityLabel={`Sự kiện ${event.title}`}
-            style={styles.eventCard}
+            style={({ pressed }) => [styles.eventCard, pressed && styles.pressed]}
             onPress={() =>
               router.push({
                 pathname: '/event-detail',
@@ -256,7 +275,9 @@ export default function HomeScreen() {
               <Text style={styles.eventMeta}>
                 📅 {event.date} - {event.time}
               </Text>
-              <Text style={styles.eventLocation}>📍 {event.location}</Text>
+              <Text style={styles.eventLocation} numberOfLines={1}>
+                📍 {event.location}
+              </Text>
             </View>
           </Pressable>
         ))}
@@ -282,9 +303,10 @@ export default function HomeScreen() {
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`Thông báo: ${item.title}`}
-              style={[
+              style={({ pressed }) => [
                 styles.notificationCard,
-                isUnread ? styles.notificationUnreadCard : styles.notificationReadCard,
+                isUnread && styles.notificationUnreadCard,
+                pressed && styles.pressed,
               ]}
               onPress={() => {
                 if (item.type === 'grade') {
@@ -328,151 +350,214 @@ export default function HomeScreen() {
         })}
       </View>
 
-      <View style={{ height: 16 }} />
+      <View style={{ height: 24 }} />
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
-    marginBottom: 4,
+/* ===== Bóng đổ và bo góc dùng chung cho mọi card ===== */
+const CARD_RADIUS = 22;
+
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
   },
-  headerLeft: {
-    flex: 1,
+  android: {
+    elevation: 3,
+    shadowColor: '#0F172A',
+  },
+  default: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+  },
+});
+
+const styles = StyleSheet.create({
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.985 }],
+  },
+
+  /* ===== Thẻ sinh viên ===== */
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: CARD_RADIUS + 2,
+    padding: 18,
+    marginTop: 2,
+    ...cardShadow,
+  },
+  heroDecorClip: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: CARD_RADIUS + 2,
+    overflow: 'hidden',
+  },
+  heroDecorLarge: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#EFF6FF',
+    top: -60,
+    right: -40,
+  },
+  heroDecorSmall: {
+    position: 'absolute',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#F0F9FF',
+    bottom: -26,
+    left: 90,
   },
   greetingText: {
     fontSize: 14,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 12,
+  },
+  studentInfo: {
+    flex: 1,
   },
   userName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 2,
   },
   studentCode: {
     fontSize: 13,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
   },
   avatarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#2563EB',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    borderWidth: 3,
+    borderColor: '#DBEAFE',
   },
   avatarLetter: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
   },
+  chevronCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* ===== Thống kê ===== */
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 10,
+    gap: 14,
+    marginTop: 16,
   },
   statCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: CARD_RADIUS,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
+    ...cardShadow,
   },
   statTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   iconCircleBlue: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconCircleGreen: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#F0FDF4',
     alignItems: 'center',
     justifyContent: 'center',
   },
   statLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
   },
   statValue: {
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 10,
+    marginTop: 14,
   },
+  statCaption: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+
+  /* ===== Tiêu đề mục ===== */
   sectionHeader: {
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 24,
+    marginBottom: 12,
   },
   sectionHeaderBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 10,
+    marginTop: 24,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#0F172A',
   },
   viewAllLink: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2563EB',
   },
+
+  /* ===== Hôm nay ===== */
   todayCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: CARD_RADIUS,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
+    ...cardShadow,
   },
   yellowIndicator: {
-    width: 3.5,
-    height: 38,
+    width: 4,
+    height: 42,
     borderRadius: 2,
     backgroundColor: '#F59E0B',
-    marginRight: 12,
+    marginRight: 14,
   },
   todayTimeCol: {
     marginRight: 16,
   },
   todayTimeStart: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
   },
   todayTimeEnd: {
@@ -493,48 +578,47 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 4,
   },
+
+  /* ===== Thao tác nhanh ===== */
   quickActionsContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
+    borderRadius: CARD_RADIUS + 2,
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    ...cardShadow,
   },
   quickActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  quickActionsRowGap: {
+    marginTop: 18,
   },
   quickActionItem: {
     flex: 1,
     alignItems: 'center',
   },
   actionIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EFF6FF',
+    width: 54,
+    height: 54,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   badgeCountCircle: {
     position: 'absolute',
-    top: -2,
-    right: -2,
+    top: -4,
+    right: -4,
     backgroundColor: '#EF4444',
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    minWidth: 19,
+    height: 19,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
   },
   badgeCountText: {
@@ -546,28 +630,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#334155',
-    marginTop: 6,
+    marginTop: 8,
+  },
+
+  /* ===== Sự kiện ===== */
+  eventsScroll: {
+    // Cho phép bóng đổ của thẻ hiển thị đầy đủ, không bị cắt ở mép dưới
+    overflow: 'visible',
   },
   eventsScrollContainer: {
     paddingRight: 16,
+    paddingBottom: 14,
     gap: 14,
   },
   eventCard: {
-    width: 255,
-    borderRadius: 18,
+    width: 260,
+    borderRadius: CARD_RADIUS,
     backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
+    ...cardShadow,
   },
   eventImageWrapper: {
     width: '100%',
-    height: 120,
+    height: 128,
     backgroundColor: '#E2E8F0',
+    borderTopLeftRadius: CARD_RADIUS,
+    borderTopRightRadius: CARD_RADIUS,
+    overflow: 'hidden',
     position: 'relative',
   },
   eventImage: {
@@ -578,10 +666,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   eventCategoryText: {
     color: '#FFFFFF',
@@ -594,8 +682,8 @@ const styles = StyleSheet.create({
     right: 10,
     backgroundColor: '#16A34A',
     borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   eventRegisteredText: {
     color: '#FFFFFF',
@@ -603,49 +691,46 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   eventContent: {
-    padding: 13,
+    padding: 14,
   },
   eventTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
     lineHeight: 20,
   },
   eventMeta: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 6,
+    marginTop: 8,
   },
   eventLocation: {
     fontSize: 12,
     color: '#64748B',
     marginTop: 3,
   },
+
+  /* ===== Thông báo ===== */
   notificationsList: {
-    gap: 10,
+    gap: 12,
   },
   notificationCard: {
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: CARD_RADIUS - 2,
     padding: 14,
     flexDirection: 'row',
     gap: 12,
+    ...cardShadow,
   },
   notificationUnreadCard: {
-    backgroundColor: '#EFF6FF',
-  },
-  notificationReadCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F9FF',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    elevation: 1,
+    borderColor: '#DBEAFE',
   },
   notificationIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -687,6 +772,6 @@ const styles = StyleSheet.create({
   notificationTime: {
     fontSize: 12,
     color: '#94A3B8',
-    marginTop: 5,
+    marginTop: 6,
   },
 });
