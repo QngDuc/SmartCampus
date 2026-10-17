@@ -3,9 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "api": "node ../api/server.js",
+    "api": "node ../backend/server.js",
     "api:seed": "node scripts/seed-routing-api.cjs",
-    "test:api": "npm --prefix ../api test",
+    "test:api": "npm --prefix ../backend test",
     "test:routes": "node scripts/test-campus-routing.cjs",
     "export:web": "expo export --platform web",
     "start": "expo start",
@@ -13,6 +13,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "test:gpx": "node scripts/test-gpx-navigation.cjs",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },

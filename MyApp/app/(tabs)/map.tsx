@@ -1,4 +1,5 @@
 import CampusMap from "@/components/campus-map";
+import NavigationOverlay from "@/components/navigation-overlay";
 import { colors, s } from "@/constants/campus";
 import {
   campusMap,
@@ -7,14 +8,10 @@ import {
   type Coordinate,
 } from "@/data/campusMap";
 import { canRoute, findCampusRoute, insideCampus } from "@/data/campusRouting";
+import { gpxTrackByDestination } from "@/data/gpxTracks";
 import { locationImages } from "@/data/locationImages";
 import { locations } from "@/data/mockData";
-import {
-  getGpxHeading,
-  getRemainingGpxDistance,
-  gpxNavigationInfo,
-  gpxNavigationRoute,
-} from "@/data/gpxNavigation";
+import { useGpxNavigation } from "@/hooks/use-gpx-navigation";
 import { showAlert } from "@/utils/feedback";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
@@ -73,7 +70,6 @@ export default function MapScreen() {
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
   const [locating, setLocating] = useState(false);
   const showRoute = params.directions === "1";
-  const [navigationStep, setNavigationStep] = useState<number | null>(null);
   const [picker, setPicker] = useState<"origin" | "destination" | null>(null);
   const [search, setSearch] = useState("");
   const request = useRef(0);
@@ -85,31 +81,9 @@ export default function MapScreen() {
   );
   const selected = locations.find((place) => place.id === selectedId);
   const origin = locations.find((place) => place.id === originId)!;
-  const navigationActive = navigationStep !== null;
-  const navigationCoordinate =
-    navigationStep === null ? undefined : gpxNavigationRoute[navigationStep];
-  const remainingDistance =
-    navigationStep === null ? 0 : getRemainingGpxDistance(navigationStep);
-  const remainingMinutes = Math.ceil(remainingDistance / 75);
-  const navigationCamera = useMemo(
-    () =>
-      navigationCoordinate && navigationStep !== null
-        ? {
-            coordinate: navigationCoordinate,
-            heading: getGpxHeading(navigationStep),
-          }
-        : undefined,
-    [navigationCoordinate, navigationStep],
-  );
-  useEffect(() => {
-    if (!navigationActive) return;
-    const timer = setInterval(() => {
-      setNavigationStep((step) =>
-        step === null || step >= gpxNavigationRoute.length - 1 ? step : step + 1,
-      );
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [navigationActive]);
+  const nav = useGpxNavigation();
+  const navigationActive = nav.active;
+  const demoTrack = selected ? gpxTrackByDestination[selected.id] : undefined;
   // Tính đường trên đồ thị nội bộ trong bộ nhớ, không đợi API định tuyến.
   const route = useMemo(
     () =>
@@ -125,7 +99,7 @@ export default function MapScreen() {
   );
 
   function selectPlace(id: number) {
-    setNavigationStep(null);
+    nav.stop();
     setCenter(locationCoordinates[id] ?? campusMap.center);
     router.setParams({ locationId: String(id), directions: "0" });
   }
@@ -210,8 +184,8 @@ export default function MapScreen() {
           selectedId={navigationActive ? undefined : selectedId}
           userLocation={navigationActive ? null : userLocation}
           onSelect={selectPlace}
-          route={navigationActive ? gpxNavigationRoute : route?.points}
-          navigation={navigationCamera}
+          route={nav.track?.route ?? route?.points}
+          navigation={nav.camera}
         />
         {!navigationActive && (
           <View style={styles.controls}>
@@ -234,7 +208,7 @@ export default function MapScreen() {
               accessibilityLabel="Xem toàn trường"
               onPress={() => {
                 setCenter({ ...campusMap.center });
-                setNavigationStep(null);
+                nav.stop();
                 router.setParams({ locationId: "", directions: "0" });
               }}
             >
@@ -249,72 +223,7 @@ export default function MapScreen() {
       </View>
 
       {navigationActive ? (
-        <>
-          <View style={styles.navigationHeader}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Thoát mô phỏng chỉ đường"
-              style={styles.navigationBack}
-              onPress={() => setNavigationStep(null)}
-            >
-              <Ionicons name="close" size={23} color="#202124" />
-            </Pressable>
-            <View style={styles.navigationHeaderText}>
-              <Text style={styles.navigationInstruction} numberOfLines={1}>
-                {remainingDistance === 0
-                  ? "Bạn đã đến Nhà số 7"
-                  : "Tiếp tục đi theo tuyến"}
-              </Text>
-              <Text style={styles.navigationDestination} numberOfLines={1}>
-                KTX Lào  →  Nhà số 7
-              </Text>
-            </View>
-            <View style={styles.demoBadge}>
-              <Text style={styles.demoBadgeText}>DEMO</Text>
-            </View>
-          </View>
-          <View style={styles.navigationSheet}>
-            <View style={styles.navigationSummary}>
-              <Ionicons name="navigate" size={25} color="#1A73E8" />
-              <View style={styles.navigationSummaryText}>
-                <Text style={styles.navigationDistance}>
-                  {remainingDistance === 0
-                    ? "Đã đến nơi"
-                    : `Còn ${remainingDistance} m`}
-                </Text>
-                <Text style={styles.navigationMeta}>
-                  {remainingDistance === 0
-                    ? "Nhà số 7"
-                    : `Đi bộ · khoảng ${remainingMinutes} phút`}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${
-                      ((navigationStep ?? 0) /
-                        (gpxNavigationRoute.length - 1)) *
-                      100
-                    }%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.demoNotice}>
-              Mô phỏng theo tuyến GPX đã ghi · Không dùng GPS trực tiếp
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              style={styles.endNavigationButton}
-              onPress={() => setNavigationStep(null)}
-            >
-              <Text style={styles.endNavigationText}>Kết thúc mô phỏng</Text>
-            </Pressable>
-          </View>
-        </>
+        <NavigationOverlay nav={nav} />
       ) : (
         <>
           <View
@@ -491,49 +400,42 @@ export default function MapScreen() {
               {showRoute && (
                 <View style={styles.routeCard}>
                   <Text style={styles.routeTitle}>
-                    {selected.id === 7
-                      ? `${Math.ceil(getRemainingGpxDistance(0) / 75)} phút · ${getRemainingGpxDistance(0)} m`
+                    {demoTrack
+                      ? `${Math.max(1, Math.ceil(demoTrack.totalMeters / demoTrack.metersPerMinute))} phút · ${demoTrack.totalMeters} m`
                       : route
                         ? `${route.minutes} phút · ${route.meters} m`
                         : "Chưa có tuyến đi bộ phù hợp"}
                   </Text>
                   <Text style={styles.infoText}>
-                    {selected.id === 7
-                      ? "KTX Lào → Nhà số 7"
+                    {demoTrack
+                      ? `${demoTrack.fromName} → ${demoTrack.toName}`
                       : `${origin.name} → ${selected.name}`}
                   </Text>
                   <Text style={styles.notice}>
-                    {selected.id === 7
-                      ? "Tuyến GPS đã ghi, dùng để chạy thử mô phỏng; chưa có chỉ dẫn rẽ hoặc định vị trực tiếp."
+                    {demoTrack
+                      ? "Tuyến GPS đã ghi, dùng để chạy thử mô phỏng; chưa có định vị trực tiếp."
                       : "Tuyến tham khảo theo sơ đồ, chưa khảo sát lối đi thực tế."}
                   </Text>
-                  {selected.id === 7 && (
+                  {demoTrack && (
                     <>
                       <Text style={styles.gpxDetails}>
-                        Ghi ngày {gpxNavigationInfo.recordedAt} ·{" "}
-                        {gpxNavigationInfo.recordedPointCount} điểm GPS ·{" "}
-                        {Math.floor(
-                          gpxNavigationInfo.recordedDurationSeconds / 60,
-                        )}
-                        :
-                        {String(
-                          gpxNavigationInfo.recordedDurationSeconds % 60,
-                        ).padStart(2, "0")}
+                        Ghi ngày {demoTrack.info.recordedAt} ·{" "}
+                        {demoTrack.info.recordedPointCount} điểm GPS ·{" "}
+                        {Math.floor(demoTrack.info.recordedDurationSeconds / 60)}:
+                        {String(demoTrack.info.recordedDurationSeconds % 60).padStart(2, "0")}
                       </Text>
                       <Text style={styles.gpxDetails}>
-                        Tốc độ TB{" "}
-                        {gpxNavigationInfo.averageSpeedKmh.toFixed(1)} km/h ·
-                        tối đa {gpxNavigationInfo.maximumSpeedKmh.toFixed(1)}{" "}
-                        km/h
+                        Tốc độ TB {demoTrack.info.averageSpeedKmh.toFixed(1)} km/h · tối đa{" "}
+                        {demoTrack.info.maximumSpeedKmh.toFixed(1)} km/h
                       </Text>
                       <Text style={styles.gpxDetails}>
-                        Độ cao GPS: {gpxNavigationInfo.minimumElevationMeters}–
-                        {gpxNavigationInfo.maximumElevationMeters} m
+                        Độ cao GPS: {demoTrack.info.minimumElevationMeters}–
+                        {demoTrack.info.maximumElevationMeters} m
                       </Text>
                       <Pressable
                         accessibilityRole="button"
                         style={styles.startNavigationButton}
-                        onPress={() => setNavigationStep(0)}
+                        onPress={() => nav.start(demoTrack)}
                       >
                         <Ionicons name="navigate" size={19} color="#fff" />
                         <Text style={styles.startNavigationText}>
@@ -741,71 +643,6 @@ const styles = StyleSheet.create({
   },
   startNavigationText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   gpxDetails: { color: "#3C4043", fontSize: 13, lineHeight: 19 },
-  navigationHeader: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    right: 12,
-    zIndex: 25,
-    minHeight: 68,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 10,
-    borderRadius: 18,
-    backgroundColor: "#fff",
-    elevation: 8,
-    boxShadow: "0px 3px 12px #0003",
-  },
-  navigationBack: {
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navigationHeaderText: { flex: 1, gap: 4 },
-  navigationInstruction: { fontSize: 16, fontWeight: "700", color: "#202124" },
-  navigationDestination: { fontSize: 12, color: "#5F6368" },
-  demoBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "#E8F0FE",
-  },
-  demoBadgeText: { color: "#1A73E8", fontWeight: "800", fontSize: 10 },
-  navigationSheet: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 12,
-    zIndex: 25,
-    padding: 18,
-    gap: 12,
-    borderRadius: 22,
-    backgroundColor: "#fff",
-    elevation: 8,
-    boxShadow: "0px 3px 12px #0003",
-  },
-  navigationSummary: { flexDirection: "row", alignItems: "center", gap: 14 },
-  navigationSummaryText: { gap: 3 },
-  navigationDistance: { color: "#202124", fontSize: 22, fontWeight: "800" },
-  navigationMeta: { color: "#5F6368", fontSize: 14 },
-  progressTrack: {
-    height: 5,
-    borderRadius: 3,
-    overflow: "hidden",
-    backgroundColor: "#DDE3EA",
-  },
-  progressFill: { height: "100%", backgroundColor: "#1A73E8" },
-  demoNotice: { fontSize: 12, color: "#64748B" },
-  endNavigationButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44,
-    borderRadius: 24,
-    backgroundColor: "#F1F3F4",
-  },
-  endNavigationText: { color: "#3C4043", fontWeight: "700" },
   routeTitle: { color: "#007C91", fontSize: 18, fontWeight: "700" },
   page: { flex: 1, backgroundColor: "#F8FAFC" },
   header: {
