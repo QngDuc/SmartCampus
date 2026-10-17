@@ -19,6 +19,26 @@ type UserResponse = { user: AuthUser };
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 const TOKEN_KEY = 'smart-campus-auth-token';
 
+// Lỗi từ API, giữ lại mã lỗi (code) để phân biệt "bị khóa/xóa" với lỗi khác
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export function isAccountDisabled(error: unknown): error is ApiError {
+  return (
+    error instanceof ApiError &&
+    (error.code === 'ACCOUNT_BLOCKED' || error.code === 'ACCOUNT_DELETED')
+  );
+}
+
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
   let response: Response;
   try {
@@ -36,7 +56,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.message || 'Yêu cầu không thành công.');
+    throw new ApiError(data.message || 'Yêu cầu không thành công.', response.status, data.code);
   }
   return data as T;
 }

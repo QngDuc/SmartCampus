@@ -1,7 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
+import { router } from 'expo-router';
+import { showAlert } from '@/utils/feedback';
 import {
   getCurrentUser,
   getStoredToken,
+  isAccountDisabled,
   removeStoredToken,
   storeToken,
   type AuthSession,
@@ -46,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSyncSummary(summarizeSync(result));
   }
 
+  // Khôi phục phiên khi mở lại app
   useEffect(() => {
     let active = true;
 
@@ -62,8 +67,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const academicResult = await synchronizeAcademics(response.user.studentId);
           if (active) applyAcademicResult(academicResult);
         }
-      } catch {
-        // Keep the stored token so a temporary API outage does not sign the user out.
+      } catch (error) {
+        if (isAccountDisabled(error)) {
+          // Tài khoản đã bị khóa/xóa trong lúc app đóng
+          await removeStoredToken();
+          if (active) {
+            setUser(null);
+            setTimetable(null);
+            setGrades(null);
+          }
+          showAlert('Tài khoản không khả dụng', error.message);
+        }
+        // Lỗi khác (mất mạng...): giữ token để không đăng xuất oan.
       } finally {
         if (active) {
           setIsLoading(false);
@@ -77,6 +92,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
+
+  // Khi đang đăng nhập: kiểm tra định kỳ xem tài khoản có bị khóa/xóa không
+  useEffect(() => {
+    if (!user) return;
+    let stopped = false;
+
+    async function check() {
+      try {
+        const token = await getStoredToken();
+        if (!token) return;
+        await getCurrentUser(token);
+      } catch (error) {
+        if (!stopped && isAccountDisabled(error)) {
+          stopped = true;
+          await signOut();
+          showAlert('Tài khoản không khả dụng', error.message);
+          router.replace('/');
+        }
+      }
+    }
+
+    const timer = setInterval(check, 30000); // 30 giây một lần
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') void check();
+    });
+
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      sub.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   async function signIn(session: AuthSession) {
     await storeToken(session.token);

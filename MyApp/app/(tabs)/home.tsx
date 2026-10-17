@@ -63,9 +63,6 @@ export default function HomeScreen() {
           <View style={styles.heroDecorLarge} />
           <View style={styles.heroDecorSmall} />
         </View>
-
-        <Text style={styles.greetingText}>Xin chào 👋</Text>
-
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Mở hồ sơ cá nhân"
