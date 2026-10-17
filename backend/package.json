@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test campus/api.test.cjs integration.test.cjs"
+  "test": "node --test campus/api.test.cjs integration.test.cjs test/auth.test.js"
   },
   "keywords": [],
   "author": "",

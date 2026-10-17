@@ -1,4 +1,6 @@
 const express = require('express');
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 const mongoose = require('mongoose');
 const cors = require('cors');
 const axios = require('axios');
@@ -44,7 +46,104 @@ app.get('/', (req, res) => {
 });
 
 
-// Lấy thông báo sinh viên mới nhất từ RSS chính thức của Trường Đại học Tây Nguyên.
+// Lấy danh sách thông báo mới nhất từ trang thông báo chính thức của trường.
+app.get('/api/announcements', async (req, res) => {
+  const sourceUrl = 'https://www.ttn.edu.vn/index.php/mthongbao/thongbao';
+
+  try {
+    const response = await axios.get(sourceUrl, {
+      headers: { 'User-Agent': 'SmartCampus/1.0' },
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      timeout: 20000,
+    });
+
+    const $ = cheerio.load(response.data);
+    const pageUrls = $('.pagination a[href*="start="]')
+      .map((_, link) => new URL($(link).attr('href'), sourceUrl).toString())
+      .get()
+      .filter(url => new URL(url).origin === new URL(sourceUrl).origin);
+    const remainingPages = await Promise.all(
+      [...new Set(pageUrls)].map(url =>
+        axios.get(url, {
+          headers: { 'User-Agent': 'SmartCampus/1.0' },
+          httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+          timeout: 20000,
+        }).then(page => page.data).catch(() => '')
+      )
+    );
+    const notices = [response.data, ...remainingPages].flatMap(html => {
+      const page = cheerio.load(html);
+      return page('td.list-title a').map((_, link) => {
+        const article = page(link);
+        const title = article.text().replace(/\s+/g, ' ').trim();
+        const articleUrl = article.attr('href');
+        if (!title || !articleUrl) return null;
+
+        const url = new URL(articleUrl, sourceUrl).toString();
+        return {
+          id: url,
+          slug: new URL(url).pathname.split('/').filter(Boolean).pop(),
+          title,
+          url,
+          publishedAt: null,
+          description: '',
+        };
+      }).get().filter(Boolean);
+    });
+
+    res.set('Cache-Control', 'no-store');
+    res.json({ sourceUrl, notices });
+  } catch (error) {
+    console.error('Không lấy được RSS thông báo của trường:', error.message);
+    res.status(502).json({ message: 'Không lấy được thông báo từ website trường.' });
+  }
+});
+
+app.get('/api/announcements/:slug', async (req, res) => {
+  const { slug } = req.params;
+  if (!/^[a-zA-Z0-9-]+$/.test(slug)) {
+    return res.status(400).json({ message: 'Mã thông báo không hợp lệ.' });
+  }
+
+  const sourceUrl = 'https://www.ttn.edu.vn/index.php/mthongbao/thongbao';
+  const articleUrl = new URL(`/index.php/thongbao/${slug}`, sourceUrl).toString();
+
+  try {
+    const response = await axios.get(articleUrl, {
+      headers: { 'User-Agent': 'SmartCampus/1.0' },
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      timeout: 20000,
+    });
+    const $ = cheerio.load(response.data);
+    const article = $('.item-page').first();
+    if (!article.length) return res.status(404).json({ message: 'Không tìm thấy thông báo.' });
+
+    const content = article.children('p, h3, h4, ul, ol, blockquote')
+      .map((_, element) => $(element).text().replace(/\s+/g, ' ').trim())
+      .get()
+      .filter(Boolean);
+    const attachments = article.find('.attachmentsContainer a.at_url')
+      .map((_, link) => ({
+        name: $(link).text().trim(),
+        url: new URL($(link).attr('href'), sourceUrl).toString(),
+      }))
+      .get();
+
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      title: article.find('.page-header h2').text().replace(/\s+/g, ' ').trim(),
+      publishedLabel: article.find('.article-info dd.create').text().replace(/\s+/g, ' ').trim(),
+      content,
+      attachments,
+      url: articleUrl,
+    });
+  } catch (error) {
+    console.error('Không lấy được nội dung thông báo:', error.message);
+    res.status(502).json({ message: 'Không lấy được nội dung thông báo từ website trường.' });
+  }
+});
+
+// Giữ API thông báo sinh viên riêng để màn hình Sự kiện tiếp tục hoạt động như trước.
 app.get('/api/notices', async (req, res) => {
   const sourceUrl = 'https://www.ttn.edu.vn/index.php/svthongbao';
 
@@ -55,41 +154,73 @@ app.get('/api/notices', async (req, res) => {
       httpsAgent: new https.Agent({ rejectUnauthorized: false }),
       timeout: 20000,
     });
-
     const $ = cheerio.load(response.data, { xmlMode: true });
-    const notices = $('item')
-      .map((_, item) => {
-        const entry = $(item);
-        const title = entry.find('title').text().trim();
-        const articleUrl = entry.find('link').text().trim();
-        const publishedAt = entry.find('pubDate').text().trim();
-        const descriptionHtml = entry.find('description').text();
-        const description = cheerio
-          .load(descriptionHtml)
-          .text()
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        if (!title || !articleUrl) return null;
-
-        return {
-          id: articleUrl,
-          title,
-          url: new URL(articleUrl, sourceUrl).toString(),
-          publishedAt: Number.isNaN(Date.parse(publishedAt))
-            ? null
-            : new Date(publishedAt).toISOString(),
-          description: description.slice(0, 240),
-        };
-      })
-      .get()
-      .filter(Boolean);
+    const notices = $('item').map((_, item) => {
+      const entry = $(item);
+      const title = entry.find('title').text().trim();
+      const articleUrl = entry.find('link').text().trim();
+      const publishedAt = entry.find('pubDate').text().trim();
+      const description = cheerio.load(entry.find('description').text()).text().replace(/\s+/g, ' ').trim();
+      if (!title || !articleUrl) return null;
+      return {
+        id: articleUrl,
+        title,
+        url: new URL(articleUrl, sourceUrl).toString(),
+        slug: new URL(articleUrl, sourceUrl).pathname.split('/').filter(Boolean).pop(),
+        publishedAt: Number.isNaN(Date.parse(publishedAt)) ? null : new Date(publishedAt).toISOString(),
+        description: description.slice(0, 240),
+      };
+    }).get().filter(Boolean);
 
     res.set('Cache-Control', 'no-store');
     res.json({ sourceUrl, notices });
   } catch (error) {
-    console.error('Không lấy được RSS thông báo của trường:', error.message);
+    console.error('Không lấy được RSS thông báo sinh viên:', error.message);
     res.status(502).json({ message: 'Không lấy được thông báo từ website trường.' });
+  }
+});
+
+app.get('/api/notices/:slug', async (req, res) => {
+  const { slug } = req.params;
+  if (!/^[a-zA-Z0-9-]+$/.test(slug)) {
+    return res.status(400).json({ message: 'Mã thông báo không hợp lệ.' });
+  }
+
+  const sourceUrl = 'https://www.ttn.edu.vn/index.php/svthongbao';
+  const articleUrl = new URL(`/index.php/svthongbao/${slug}`, sourceUrl).toString();
+
+  try {
+    const response = await axios.get(articleUrl, {
+      headers: { 'User-Agent': 'SmartCampus/1.0' },
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      timeout: 20000,
+    });
+    const $ = cheerio.load(response.data);
+    const article = $('.item-page').first();
+    if (!article.length) return res.status(404).json({ message: 'Không tìm thấy thông báo.' });
+
+    const content = article.children('p, h3, h4, ul, ol, blockquote')
+      .map((_, element) => $(element).text().replace(/\s+/g, ' ').trim())
+      .get()
+      .filter(Boolean);
+    const attachments = article.find('.attachmentsContainer a.at_url')
+      .map((_, link) => ({
+        name: $(link).text().trim(),
+        url: new URL($(link).attr('href'), sourceUrl).toString(),
+      }))
+      .get();
+
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      title: article.find('.page-header h2').text().replace(/\s+/g, ' ').trim(),
+      publishedLabel: article.find('.article-info dd.create').text().replace(/\s+/g, ' ').trim(),
+      content,
+      attachments,
+      url: articleUrl,
+    });
+  } catch (error) {
+    console.error('Không lấy được nội dung thông báo sinh viên:', error.message);
+    res.status(502).json({ message: 'Không lấy được nội dung thông báo từ website trường.' });
   }
 });
 

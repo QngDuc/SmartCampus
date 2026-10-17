@@ -2,6 +2,6 @@
   "name": "smart-campus",
   "private": true,
   "scripts": {
-    "api": "npm --prefix api start"
+    "api": "npm --prefix backend start"
   }
 }

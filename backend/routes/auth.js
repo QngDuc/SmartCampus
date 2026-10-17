@@ -6,6 +6,17 @@ const User = require('../models/User');
 const router = express.Router();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const BLOCKED_MESSAGE_LOGIN =
+  'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ bộ phận hỗ trợ để được giải quyết.';
+const BLOCKED_MESSAGE_ONLINE =
+  'Tài khoản của bạn vừa bị khóa bởi quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.';
+const DELETED_MESSAGE =
+  'Tài khoản của bạn đã bị xóa khỏi hệ thống. Vui lòng liên hệ bộ phận hỗ trợ.';
+
+function isBlocked(user) {
+  return user.status === 'blocked' || user.isActive === false;
+}
+
 function publicUser(user) {
   return {
     id: user._id.toString(),
@@ -21,7 +32,7 @@ function issueToken(user) {
   });
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const authorization = req.get('authorization') || '';
   const token = authorization.startsWith('Bearer ')
     ? authorization.slice(7)
@@ -31,12 +42,26 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ message: 'Phiên đăng nhập không hợp lệ.' });
   }
 
+  let payload;
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = payload.sub;
-    return next();
+    payload = jwt.verify(token, process.env.JWT_SECRET);
   } catch {
     return res.status(401).json({ message: 'Phiên đăng nhập đã hết hạn.' });
+  }
+
+  try {
+    const user = await User.findById(payload.sub).select('status isActive');
+    if (!user) {
+      return res.status(401).json({ code: 'ACCOUNT_DELETED', message: DELETED_MESSAGE });
+    }
+    if (isBlocked(user)) {
+      return res.status(403).json({ code: 'ACCOUNT_BLOCKED', message: BLOCKED_MESSAGE_ONLINE });
+    }
+    req.userId = payload.sub;
+    return next();
+  } catch (error) {
+    console.error('Không thể xác thực tài khoản:', error.message);
+    return res.status(500).json({ message: 'Không thể xác thực lúc này.' });
   }
 }
 
@@ -112,6 +137,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Email/MSSV hoặc mật khẩu không chính xác.' });
     }
 
+    // Kiểm tra khóa SAU khi mật khẩu đúng, tránh lộ tài khoản nào đang bị khóa
+    if (isBlocked(user)) {
+      return res.status(403).json({ code: 'ACCOUNT_BLOCKED', message: BLOCKED_MESSAGE_LOGIN });
+    }
+
+    user.lastLogin = new Date();
+    user.lastSeen = user.lastLogin;
+    await user.save();
+
     return res.json({ user: publicUser(user), token: issueToken(user) });
   } catch (error) {
     console.error('Không thể đăng nhập:', error.message);
@@ -120,9 +154,21 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
+  // Log để kiểm tra app có gửi nhịp /me hay không (xóa sau khi test xong)
+  console.log('[/me] heartbeat', req.userId, new Date().toISOString());
   try {
     const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ message: 'Không tìm thấy tài khoản.' });
+    if (!user) {
+      return res.status(401).json({ code: 'ACCOUNT_DELETED', message: DELETED_MESSAGE });
+    }
+    const result = await User.updateOne(
+      { _id: user._id },
+      { $set: { lastSeen: new Date() } },
+      { timestamps: false }
+    );
+    if (!result.matchedCount) {
+      console.warn('[/me] không ghi được lastSeen cho', req.userId);
+    }
     return res.json({ user: publicUser(user) });
   } catch (error) {
     console.error('Không thể tải tài khoản:', error.message);

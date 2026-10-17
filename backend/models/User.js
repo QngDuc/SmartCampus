@@ -27,6 +27,24 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    // Trùng với web admin: 'active' | 'blocked'
+    status: {
+      type: String,
+      enum: ['active', 'blocked'],
+      default: 'active',
+    },
+    lastLogin: {
+      type: Date,
+      default: null,
+    },
+    lastSeen: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
