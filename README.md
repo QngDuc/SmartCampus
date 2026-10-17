@@ -20,12 +20,11 @@ Một số luồng như đăng nhập, đăng ký, hồ sơ, sự kiện và d�
 
 ## Chạy dự án
 
-Frontend và API chạy riêng trong hai terminal. Mở terminal thứ nhất để chạy API:
+Frontend và API chạy riêng trong hai terminal. Từ thư mục gốc của repository, mở terminal thứ nhất để cài dependencies và chạy API:
 
 ```powershell
-cd D:\SmartCampus-dev\api
-npm install
-node server.js
+npm --prefix api install
+npm run api
 ```
 
 Mặc định API chạy tại `http://localhost:3000`. Có thể kiểm tra server bằng cách mở URL đó trong trình duyệt; API sẽ trả về thông báo server đang hoạt động.

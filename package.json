@@ -1,0 +1,7 @@
+{
+  "name": "smart-campus",
+  "private": true,
+  "scripts": {
+    "api": "npm --prefix api start"
+  }
+}

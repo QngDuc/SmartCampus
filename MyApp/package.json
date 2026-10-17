@@ -13,6 +13,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "test:gpx": "node scripts/test-gpx-navigation.cjs",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
