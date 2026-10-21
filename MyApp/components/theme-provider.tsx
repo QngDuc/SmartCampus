@@ -1,0 +1,9 @@
+import {createContext,useContext,useEffect,useMemo,useState,type ReactNode} from 'react';
+import {Platform,useColorScheme} from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+export type ThemeMode='system'|'light'|'dark';
+const palettes={light:{background:'#F1F5F9',card:'#FFFFFF',text:'#0F172A',muted:'#64748B',border:'#E2E8F0',input:'#F8FAFC',primary:'#2563EB',subtle:'#EFF6FF'},dark:{background:'#0B1220',card:'#111C2E',text:'#E5E7EB',muted:'#9CAFC5',border:'#263449',input:'#0B1628',primary:'#7CABFF',subtle:'#182A46'}};
+type Palette=typeof palettes.light;type Value={mode:ThemeMode;isDark:boolean;colors:Palette;setMode:(m:ThemeMode)=>void};
+const C=createContext<Value|null>(null),KEY='smartcampus-theme-mode';
+export function ThemeProvider({children}:{children:ReactNode}){const sys=useColorScheme();const[mode,setM]=useState<ThemeMode>('system');useEffect(()=>{let ok=true;const load=async()=>{try{const x=Platform.OS==='web'?localStorage.getItem(KEY):await SecureStore.getItemAsync(KEY);if(ok&&(x==='system'||x==='light'||x==='dark'))setM(x)}catch{}};void load();return()=>{ok=false}},[]);const setMode=(m:ThemeMode)=>{setM(m);try{const p=Platform.OS==='web'?Promise.resolve().then(()=>localStorage.setItem(KEY,m)):SecureStore.setItemAsync(KEY,m);void p.catch(()=>{})}catch{}};const isDark=mode==='dark'||(mode==='system'&&sys==='dark'),colors=isDark?palettes.dark:palettes.light;const value=useMemo(()=>({mode,isDark,colors,setMode}),[mode,isDark]);return <C.Provider value={value}>{children}</C.Provider>}
+export function useAppTheme(){const x=useContext(C);if(!x)throw Error('ThemeProvider missing');return x}

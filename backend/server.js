@@ -40,7 +40,7 @@ function createApp(campusOptions = {}) {
     }
     next();
   });
-  app.use(express.json());
+  app.use(express.json({ limit: "2mb" }));
   app.use(cors());
   app.use("/api/auth", authRouter);
 

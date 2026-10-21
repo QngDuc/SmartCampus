@@ -8,8 +8,9 @@ import {
   isAccountDisabled,
   removeStoredToken,
   storeToken,
-  type AuthSession,
+  updateCurrentUser,
   type AuthUser,
+  type AuthSession,
 } from '@/utils/auth';
 import {
   summarizeSync,
@@ -30,6 +31,7 @@ type AuthContextValue = {
   syncErrors: { timetable: string | null; grades: string | null };
   signIn: (session: AuthSession) => Promise<AcademicSyncSummary>;
   signOut: () => Promise<void>;
+  updateProfile: (profile: Pick<AuthUser, 'name' | 'email' | 'className' | 'cohort' | 'major' | 'faculty' | 'avatar'>) => Promise<AuthUser>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -156,6 +158,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSyncErrors({ timetable: null, grades: null });
   }
 
+  async function updateProfile(
+    profile: Pick<AuthUser, 'name' | 'email' | 'className' | 'cohort' | 'major' | 'faculty' | 'avatar'>,
+  ) {
+    const token = await getStoredToken();
+    if (!token) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    const response = await updateCurrentUser(token, profile);
+    setUser(response.user);
+    return response.user;
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -167,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       syncErrors,
       signIn,
       signOut,
+      updateProfile,
     }}>
       {children}
     </AuthContext.Provider>

@@ -6,6 +6,11 @@ export type AuthUser = {
   studentId: string;
   name: string;
   email: string;
+  className: string;
+  cohort: string;
+  major: string;
+  faculty: string;
+  avatar: string;
 };
 
 export type AuthSession = {
@@ -56,6 +61,12 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 404 && path === '/api/auth/profile') {
+      throw new ApiError(
+        'API đang chạy phiên bản cũ. Hãy khởi động lại backend rồi thử lưu lại.',
+        response.status,
+      );
+    }
     throw new ApiError(data.message || 'Yêu cầu không thành công.', response.status, data.code);
   }
   return data as T;
@@ -82,6 +93,16 @@ export function loginUser(input: { identifier: string; password: string }) {
 
 export function getCurrentUser(token: string) {
   return request<UserResponse>('/api/auth/me', {}, token);
+}
+
+export function updateCurrentUser(
+  token: string,
+  profile: Pick<AuthUser, 'name' | 'email' | 'className' | 'cohort' | 'major' | 'faculty' | 'avatar'>,
+) {
+  return request<UserResponse>('/api/auth/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(profile),
+  }, token);
 }
 
 export async function getStoredToken() {

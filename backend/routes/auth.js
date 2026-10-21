@@ -23,6 +23,11 @@ function publicUser(user) {
     studentId: user.studentId,
     name: user.name,
     email: user.email,
+    className: user.className || '',
+    cohort: user.cohort || '',
+    major: user.major || '',
+    faculty: user.faculty || '',
+    avatar: user.avatar || '',
   };
 }
 
@@ -173,6 +178,45 @@ router.get('/me', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Không thể tải tài khoản:', error.message);
     return res.status(500).json({ message: 'Không thể tải tài khoản lúc này.' });
+  }
+});
+
+router.patch('/profile', requireAuth, async (req, res) => {
+  const name = String(req.body?.name ?? '').trim();
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const className = String(req.body?.className ?? '').trim();
+  const cohort = String(req.body?.cohort ?? '').trim();
+  const major = String(req.body?.major ?? '').trim();
+  const faculty = String(req.body?.faculty ?? '').trim();
+  const avatar = String(req.body?.avatar ?? '');
+
+  if (!name || name.length > 100) {
+    return res.status(400).json({ message: 'Họ tên không hợp lệ.' });
+  }
+  if (email.length > 254 || !emailPattern.test(email)) {
+    return res.status(400).json({ message: 'Email không hợp lệ.' });
+  }
+  if ([className, cohort, major, faculty].some(value => value.length > 150)) {
+    return res.status(400).json({ message: 'Thông tin hồ sơ vượt quá độ dài cho phép.' });
+  }
+  if (avatar.length > 1400000 || (avatar && !/^data:image\/(png|jpeg|webp);base64,/.test(avatar))) {
+    return res.status(400).json({ message: 'Ảnh đại diện không hợp lệ hoặc quá lớn.' });
+  }
+
+  try {
+    const duplicate = await User.findOne({ email, _id: { $ne: req.userId } }).select('_id');
+    if (duplicate) return res.status(409).json({ message: 'Email này đã được sử dụng.' });
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: { name, email, className, cohort, major, faculty, avatar } },
+      { new: true, runValidators: true },
+    );
+    if (!user) return res.status(401).json({ code: 'ACCOUNT_DELETED', message: DELETED_MESSAGE });
+    return res.json({ user: publicUser(user) });
+  } catch (error) {
+    console.error('Không thể cập nhật hồ sơ:', error.message);
+    return res.status(500).json({ message: 'Không thể cập nhật hồ sơ lúc này.' });
   }
 });
 

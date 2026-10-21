@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: 254,
     },
+    className: { type: String, trim: true, default: '', maxlength: 100 },
+    cohort: { type: String, trim: true, default: '', maxlength: 100 },
+    major: { type: String, trim: true, default: '', maxlength: 150 },
+    faculty: { type: String, trim: true, default: '', maxlength: 150 },
+    avatar: { type: String, default: '', maxlength: 1400000 },
     passwordHash: {
       type: String,
       required: true,

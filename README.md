@@ -1,3 +1,25 @@
+## Chạy API và web trên Windows
+
+Lưu hồ sơ cần API backend chạy phiên bản mới. Nếu đang có API cũ chạy, dừng bằng `Ctrl+C` trước khi chạy lại.
+
+**Terminal 1 — API**
+
+```powershell
+cd D:\SmartCampus\SmartCampus\backend
+npm start
+```
+
+Chờ dòng `Server đang chạy tại http://localhost:3000` và thông báo kết nối MongoDB thành công.
+
+**Terminal 2 — ứng dụng web**
+
+```powershell
+cd D:\SmartCampus\SmartCampus\MyApp
+npm run web
+```
+
+Trang hồ sơ lưu thông tin qua `PATCH /api/auth/profile` trên API cổng 3000. Nếu đổi code backend, hãy khởi động lại API; chỉ tải lại trang web sẽ không cập nhật tiến trình backend đang chạy.
+
 <div align="center">
 
 # 🎓 Smart Campus
