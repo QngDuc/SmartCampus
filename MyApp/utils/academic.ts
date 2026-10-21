@@ -26,6 +26,15 @@ export type GradesData = {
   tables: GradeTable[];
 };
 
+/** Các cột điểm thành phần giống bảng điểm trên web trường. */
+export type CourseScores = {
+  process: string; // ĐBP: điểm bộ phận
+  exam1: string;   // Thi1: điểm thi lần 1
+  exam2: string;   // Thi2: điểm thi lần 2
+  total1: string;  // Đ1: điểm tổng kết lần 1
+  total2: string;  // Đ2: điểm tổng kết lần 2
+};
+
 export type CourseGrade = {
   id: string;
   code: string;
@@ -36,6 +45,7 @@ export type CourseGrade = {
   credits: number | null;
   /** P = đạt không phân mức (GDTC, GDQP-AN...), không tính vào GPA. */
   letter: 'A' | 'B' | 'C' | 'D' | 'F' | 'P' | null;
+  scores: CourseScores;
   details: { label: string; value: string }[];
 };
 
@@ -175,9 +185,24 @@ export function parseCourseGrades(tables: GradeTable[]): CourseGrade[] {
     const scoreIndex = headers.findIndex(header =>
       /\bhe\s*10\b|tong ket|^diem tk|^tk\b|diem hp|diem hoc phan|diem so/i.test(header));
 
+    // Các cột điểm thành phần như web trường: ĐBP | Thi1 | Thi2 | Đ1 | Đ2
+    // (sau normalizeHeader: "ĐBP" -> "dbp", "Đ1" -> "d1")
+    const findCol = (pattern: RegExp) => headers.findIndex(header => pattern.test(header.trim()));
+    const dbpIndex = findCol(/^dbp$/);
+    const thi1Index = findCol(/^thi\s*1$/);
+    const thi2Index = findCol(/^thi\s*2$/);
+    const d1Index = findCol(/^d\s*1$/);
+    const d2Index = findCol(/^d\s*2$/);
+    const scoreColumns = [dbpIndex, thi1Index, thi2Index, d1Index, d2Index];
+
     return table.rows.flatMap((row, rowIndex) => {
       const fallbackSubjectIndex = row.findIndex((value, index) =>
-        value?.trim() && index !== codeIndex && index !== creditIndex && !gradeIndexes.includes(index) && !/^\d+(?:[,.]\d+)?$/.test(value.trim())
+        value?.trim()
+        && index !== codeIndex
+        && index !== creditIndex
+        && !gradeIndexes.includes(index)
+        && !scoreColumns.includes(index)
+        && !/^\d+(?:[,.]\d+)?$/.test(value.trim())
       );
       const resolvedSubjectIndex = subjectIndex >= 0 ? subjectIndex : fallbackSubjectIndex;
       const subject = row[resolvedSubjectIndex]?.trim() || row[codeIndex]?.trim();
@@ -198,12 +223,20 @@ export function parseCourseGrades(tables: GradeTable[]): CourseGrade[] {
       }
 
       const credits = readCredits(row[creditIndex]);
-      const excludedIndexes = new Set([resolvedSubjectIndex, codeIndex, creditIndex, ...gradeIndexes]);
+      const excludedIndexes = new Set([
+        resolvedSubjectIndex,
+        codeIndex,
+        creditIndex,
+        ...gradeIndexes,
+        ...scoreColumns,
+      ]);
       const details = row.flatMap((value, index) => {
         const label = table.headers[index]?.trim();
         if (!value?.trim() || !label || excludedIndexes.has(index) || /diem|grade|score|xep loai|he\s*\d+/i.test(normalizeHeader(label))) return [];
         return [{ label, value: value.trim() }];
       });
+
+      const cell = (index: number) => (index >= 0 ? row[index]?.trim() ?? '' : '');
 
       return [{
         id: `${tableIndex}-${rowIndex}`,
@@ -218,6 +251,13 @@ export function parseCourseGrades(tables: GradeTable[]): CourseGrade[] {
         term: termIndex >= 0 ? row[termIndex]?.trim() ?? '' : '',
         credits,
         letter,
+        scores: {
+          process: cell(dbpIndex),
+          exam1: cell(thi1Index),
+          exam2: cell(thi2Index),
+          total1: cell(d1Index),
+          total2: cell(d2Index),
+        },
         details,
       }];
     });

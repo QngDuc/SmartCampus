@@ -68,6 +68,28 @@ function GradeBadge({ letter, compact = false }: { letter: CourseGrade['letter']
   );
 }
 
+/* Hàng điểm giống web trường: ĐBP | Thi 1 | Thi 2 | Đ1 | Đ2 | Điểm chữ (ở cuối) */
+function ScoreStrip({ scores, letter }: { scores: CourseGrade['scores']; letter: CourseGrade['letter'] }) {
+  const items = [
+    { label: 'ĐBP', value: scores.process },
+    { label: 'Thi 1', value: scores.exam1 },
+    { label: 'Thi 2', value: scores.exam2 },
+    { label: 'Đ1', value: scores.total1 },
+    { label: 'Đ2', value: scores.total2 },
+  ];
+  return (
+    <View style={styles.scoreStrip}>
+      {items.map(item => (
+        <View key={item.label} style={styles.scoreCell}>
+          <Text style={styles.scoreLabel}>{item.label}</Text>
+          <Text style={styles.scoreValue}>{item.value || '—'}</Text>
+        </View>
+      ))}
+      <GradeBadge letter={letter} compact />
+    </View>
+  );
+}
+
 export default function GradesScreen() {
   const { user, grades, isSyncing, syncErrors } = useAuth();
   const [courseSearch, setCourseSearch] = useState('');
@@ -320,15 +342,13 @@ export default function GradesScreen() {
                         key={course.id}
                         style={[styles.courseRow, index > 0 && styles.courseRowDivider]}
                       >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.rowCourseName} numberOfLines={2}>{course.subject}</Text>
-                          <Text style={styles.rowCourseMeta}>
-                            {[course.code, course.credits !== null ? `${course.credits} TC` : '']
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </Text>
-                        </View>
-                        <GradeBadge letter={course.letter} compact />
+                        <Text style={styles.rowCourseName} numberOfLines={2}>{course.subject}</Text>
+                        <Text style={styles.rowCourseMeta}>
+                          {[course.code, course.credits !== null ? `${course.credits} TC` : '']
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Text>
+                        <ScoreStrip scores={course.scores} letter={course.letter} />
                       </View>
                     ))}
                   </View>
@@ -357,7 +377,7 @@ export default function GradesScreen() {
               {searchedCourses.map(course => (
                 <View key={course.id} style={styles.courseCard}>
                   <View style={styles.courseCardHeader}>
-                    <View style={{ flex: 1, marginRight: 10 }}>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.courseName}>{course.subject}</Text>
                       {!!(course.code || course.semester) && (
                         <Text style={styles.courseCodeRow}>
@@ -365,8 +385,9 @@ export default function GradesScreen() {
                         </Text>
                       )}
                     </View>
-                    <GradeBadge letter={course.letter} />
                   </View>
+
+                  <ScoreStrip scores={course.scores} letter={course.letter} />
 
                   <View style={styles.chipsRow}>
                     {course.credits !== null && (
@@ -738,9 +759,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   courseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     paddingVertical: 12,
   },
   courseRowDivider: {
@@ -757,6 +775,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
     marginTop: 2,
+  },
+
+  /* Hàng điểm thành phần */
+  scoreStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  scoreCell: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  scoreLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  scoreValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 1,
   },
 
   /* Huy hiệu điểm */
