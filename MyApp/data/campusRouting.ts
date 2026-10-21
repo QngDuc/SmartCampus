@@ -1,4 +1,5 @@
 import { fromDiagram, locationCoordinates, type Coordinate } from "./campusMap";
+import { surveyedJunctions, surveyedLinks } from "./surveyedPaths";
 
 // Phạm vi tham khảo số hóa từ ảnh người dùng, không phải ranh giới địa chính.
 export const campusBoundary = [
@@ -62,6 +63,7 @@ const junctions: Record<string, Coordinate> = {
   medicine: fromDiagram(110, 485),
   agriculture: fromDiagram(495, 330),
   school: fromDiagram(720, 515),
+  ...surveyedJunctions,
 };
 const links: [string, string][] = [
   ["gate", "fork"],
@@ -78,6 +80,7 @@ const links: [string, string][] = [
   ["west", "medicine"],
   ["bridge", "agriculture"],
   ["middle", "school"],
+  ...surveyedLinks,
 ];
 // Nhánh tiếp cận là ước lượng, cần xác minh lối vào trước khi bật điều hướng thực tế.
 const anchors: Record<number, string> = {
@@ -94,6 +97,8 @@ const anchors: Record<number, string> = {
   12: "rear",
   13: "sport",
   14: "school",
+  15: "ag_0",
+  16: "ktx_0",
   100: "gate",
 };
 const nodes = { ...junctions };
