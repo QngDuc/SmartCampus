@@ -115,6 +115,22 @@ export const locations = [
       "Trường thực hành ở phía đường Y Wang theo sơ đồ được cung cấp.",
     hours: "Theo lịch học",
   },
+    {
+    id: 15,
+    name: "Nhà Nông Lâm",
+    category: "Giảng đường",
+    description:
+      "Khu nhà Nông Lâm, vị trí lấy từ điểm bắt đầu tuyến GPS đã ghi; chưa xác nhận cửa vào.",
+    hours: "Theo lịch học",
+  },
+  {
+    id: 16,
+    name: "Ký túc xá (KTX Lào)",
+    category: "Ký túc xá",
+    description:
+      "Khu ký túc xá KTX Lào, vị trí lấy từ điểm bắt đầu tuyến GPS đã ghi; chưa xác nhận cửa vào.",
+    hours: "Theo quy định của ký túc xá",
+  },
 ];
 export const events = [
   {

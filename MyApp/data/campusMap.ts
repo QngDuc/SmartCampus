@@ -46,6 +46,8 @@ export const locationCoordinates: Partial<Record<number, Coordinate>> = {
   12: fromDiagram(590, 700),
   13: fromDiagram(370, 605),
   14: { latitude: 12.65035675, longitude: 108.02887559 },
+  15: { latitude: 12.651479, longitude: 108.026585 },
+  16: { latitude: 12.651035, longitude: 108.027015 },
 };
 
 export const approximateLocationIds = new Set([1, 2, 3, 5, 6, 7, 8, 9, 12, 13]);

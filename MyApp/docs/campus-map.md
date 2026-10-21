@@ -29,7 +29,7 @@ Màn hình gồm hai ô chọn điểm xuất phát/đến, bản đồ chiếm 
 
 Riêng Nhà số 7 có nút **Mô phỏng điều hướng 3D** để chạy thử tuyến KTX Lào → Nhà số 7 từ `gps-track/Track_Ktx_Laos_-_Nha_7.gpx`. Đường GPX được giản lược để vẽ nhẹ; vị trí trên màn hình chạy lần lượt theo tuyến mỗi 5 giây và được gắn nhãn DEMO, không đọc GPS hoặc đại diện cho hướng dẫn rẽ thật. Thẻ tuyến cũng hiển thị metadata trong tệp: thời điểm ghi 14/10/2026, 263 điểm GPS, thời lượng 4:23, tốc độ trung bình 3.35 km/h, tốc độ tối đa 6.3 km/h và cao độ GPS 423–425.9 m. Native dùng camera nghiêng 3D; bản web dùng Leaflet nên hiển thị chế độ xem 2D. Các nhánh nét đứt ước lượng đã được bỏ khỏi bản đồ; đường biên khuôn viên vẫn hiển thị bằng nét liền.
 
-Phạm vi đa giác được ước lượng từ ảnh, không phải ranh giới địa chính. Web dùng maxBounds, giới hạn zoom, giới hạn tile và che bên ngoài. Android dùng setMapBoundaries; iOS kiểm tra tâm camera sau thao tác. Cả hai native đều che bên ngoài đa giác. Đồ thị không có đường công cộng bên ngoài; các đoạn tuyến được kiểm tra không vượt đa giác. `npm run test:routes` kiểm tra 196 cặp điểm, chiều ngược, độ dài và phạm vi.
+Phạm vi đa giác được ước lượng từ ảnh, không phải ranh giới địa chính. Web dùng maxBounds, giới hạn zoom, giới hạn tile và che bên ngoài. Android dùng setMapBoundaries; iOS kiểm tra tâm camera sau thao tác. Cả hai native đều che bên ngoài đa giác. Đồ thị không có đường công cộng bên ngoài; các đoạn tuyến được kiểm tra không vượt đa giác. `npm run test:routes` kiểm tra 256 cặp điểm, chiều ngược, độ dài và phạm vi.
 
 ## Kiểm tra
 

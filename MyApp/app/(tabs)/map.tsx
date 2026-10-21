@@ -255,6 +255,7 @@ export default function MapScreen() {
                   "Giảng đường",
                   "Tiện ích",
                   "Thể thao",
+                  "Ký túc xá",
                   "Cổng trường",
                 ].map((item) => (
                   <Pressable
