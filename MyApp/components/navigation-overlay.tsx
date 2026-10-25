@@ -1,3 +1,4 @@
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { formatDistance } from "@/data/navigationSteps";
@@ -5,6 +6,7 @@ import type { GpxNavigation } from "@/hooks/use-gpx-navigation";
 
 // Banner rẽ + thẻ thông tin kiểu Google Maps cho chế độ mô phỏng GPX.
 export default function NavigationOverlay({ nav }: { nav: GpxNavigation }) {
+  const styles = useAdaptiveStyles(baseStyles);
   const { track, next } = nav;
   if (!track || !next) return null;
   const { step, following, distance } = next;
@@ -78,7 +80,7 @@ export default function NavigationOverlay({ nav }: { nav: GpxNavigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   banner: {
     position: "absolute",
     top: 12,
@@ -146,3 +148,5 @@ const styles = StyleSheet.create({
   },
   endText: { color: "#3C4043", fontWeight: "700" },
 });
+
+const styles = baseStyles;

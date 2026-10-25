@@ -1,8 +1,10 @@
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 export function AuthLoadingOverlay({ visible, title }: { visible: boolean; title: string }) {
+  const styles = useAdaptiveStyles(baseStyles);
   const [progress] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function AuthLoadingOverlay({ visible, title }: { visible: boolean; title
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: {
     flex: 1,
     alignItems: 'center',
@@ -101,3 +103,4 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 });
+const styles = baseStyles;

@@ -1,3 +1,4 @@
+import { useAdaptiveStyles, useAppTheme } from '@/components/theme-provider';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -32,6 +33,16 @@ type SemesterGroup = {
   sortKey: number;
 };
 
+const DARK_GRADE_STYLE: Record<string, { bg: string; fg: string; border: string }> = {
+  A: { bg: '#16352A', fg: '#FFFFFF', border: '#28563F' },
+  B: { bg: '#1A2B45', fg: '#FFFFFF', border: '#2B4770' },
+  C: { bg: '#3A301D', fg: '#FFFFFF', border: '#66542C' },
+  D: { bg: '#3A291B', fg: '#FFFFFF', border: '#67452B' },
+  F: { bg: '#3C2026', fg: '#FFFFFF', border: '#6A303A' },
+  P: { bg: '#302745', fg: '#FFFFFF', border: '#4D3D6B' },
+  none: { bg: '#1B2738', fg: '#FFFFFF', border: '#2A3A52' },
+};
+
 function normalizeSearchText(value: string) {
   return value
     .toLocaleLowerCase('vi')
@@ -52,7 +63,9 @@ const GRADE_STYLE: Record<string, { bg: string; fg: string; border: string }> = 
 };
 
 function GradeBadge({ letter, compact = false }: { letter: CourseGrade['letter']; compact?: boolean }) {
-  const palette = GRADE_STYLE[letter ?? 'none'];
+  const { isDark } = useAppTheme();
+  const styles = useAdaptiveStyles(baseStyles);
+  const palette = isDark ? DARK_GRADE_STYLE[letter ?? 'none'] : GRADE_STYLE[letter ?? 'none'];
   return (
     <View
       style={[
@@ -70,6 +83,7 @@ function GradeBadge({ letter, compact = false }: { letter: CourseGrade['letter']
 
 /* Hàng điểm giống web trường: ĐBP | Thi 1 | Thi 2 | Đ1 | Đ2 | Điểm chữ (ở cuối) */
 function ScoreStrip({ scores, letter }: { scores: CourseGrade['scores']; letter: CourseGrade['letter'] }) {
+  const styles = useAdaptiveStyles(baseStyles);
   const items = [
     { label: 'ĐBP', value: scores.process },
     { label: 'Thi 1', value: scores.exam1 },
@@ -91,6 +105,8 @@ function ScoreStrip({ scores, letter }: { scores: CourseGrade['scores']; letter:
 }
 
 export default function GradesScreen() {
+  const { isDark } = useAppTheme();
+  const styles = useAdaptiveStyles(baseStyles);
   const { user, grades, isSyncing, syncErrors } = useAuth();
   const [courseSearch, setCourseSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('semester');
@@ -238,7 +254,7 @@ export default function GradesScreen() {
           value={courseSearch}
           onChangeText={setCourseSearch}
           placeholder="Tìm môn học hoặc mã học phần..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={isDark ? '#FFFFFF' : '#94A3B8'}
           style={styles.courseSearchInput}
         />
         {!!courseSearch && (
@@ -449,7 +465,7 @@ const cardShadow = Platform.select({
   },
 });
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -894,3 +910,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+const styles = baseStyles;

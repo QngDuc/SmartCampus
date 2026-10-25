@@ -3,12 +3,14 @@ import { Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen, Button } from '@/components/campus-ui';
-import { colors, s } from '@/constants/campus';
+import { colors, s as baseStyles } from '@/constants/campus';
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import { events, upcomingEvents } from '@/data/mockData';
 
 import { showAlert } from '@/utils/feedback';
 
 export default function EventDetailScreen() {
+  const s = useAdaptiveStyles(baseStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const upcoming = upcomingEvents.find(item => String(item.id) === id);
   const regular = events.find(item => String(item.id) === id);

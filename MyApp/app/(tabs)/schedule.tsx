@@ -1,3 +1,5 @@
+import { useAppTheme } from '@/components/theme-provider';
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -50,6 +52,8 @@ function scheduleDate(item: TimetableItem) {
 }
 
 export default function ScheduleScreen() {
+  const { isDark } = useAppTheme();
+  const styles = useAdaptiveStyles(baseStyles);
   const { timetable, isSyncing, syncErrors } = useAuth();
   const scheduleList = timetable?.schedules ?? [];
   const [view, setView] = useState<'today' | 'week' | 'month'>('month');
@@ -134,7 +138,7 @@ export default function ScheduleScreen() {
       )}
 
       {!!syncErrors.timetable && !isSyncing && (
-        <View style={[s.card, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
+        <View style={[s.card, { backgroundColor: isDark ? '#332A1D' : '#FFF7ED', borderColor: isDark ? '#5A4828' : '#FED7AA' }]}>
           <Text style={s.heading}>Chưa tải được thời khóa biểu</Text>
           <Text style={s.muted}>{syncErrors.timetable}</Text>
         </View>
@@ -207,7 +211,7 @@ export default function ScheduleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   viewSelector: {
     flexDirection: 'row',
     gap: 8,
@@ -271,3 +275,5 @@ const styles = StyleSheet.create({
   emptyTitle: { color: '#0F172A', fontSize: 15, fontWeight: '700' },
   emptyText: { color: '#64748B', fontSize: 13, textAlign: 'center' },
 });
+
+const styles = baseStyles;

@@ -1,9 +1,11 @@
 import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native';
 import { Screen } from '@/components/campus-ui';
-import { s } from '@/constants/campus';
+import { s as baseStyles } from '@/constants/campus';
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import { formatNoticeDate, useSchoolNotices } from '@/hooks/use-school-notices';
 
 export default function EventsScreen() {
+  const s = useAdaptiveStyles(baseStyles);
   const { notices, loading, error, retry } = useSchoolNotices();
 
   return <Screen>

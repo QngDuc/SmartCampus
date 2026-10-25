@@ -1,20 +1,22 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppTheme } from '@/components/theme-provider';
 
 // 5 tab chính đúng như ảnh thiết kế: Trang chủ, Điểm, TKB, Bản đồ, Hồ sơ
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useAppTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2563EB',
-        tabBarInactiveTintColor: '#64748B',
+        tabBarActiveTintColor: isDark ? '#FFFFFF' : colors.primary,
+        tabBarInactiveTintColor: isDark ? '#FFFFFF' : colors.muted,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#F1F5F9',
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 68 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 8),

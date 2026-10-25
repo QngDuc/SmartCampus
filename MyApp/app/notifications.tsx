@@ -1,3 +1,4 @@
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -5,6 +6,7 @@ import { Screen } from '@/components/campus-ui';
 import { latestNotifications } from '@/data/mockData';
 
 export default function NotificationsScreen() {
+  const styles = useAdaptiveStyles(baseStyles);
   const [items, setItems] = useState(latestNotifications);
 
   function markRead(id: number) {
@@ -80,7 +82,7 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -174,3 +176,5 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 });
+
+const styles = baseStyles;

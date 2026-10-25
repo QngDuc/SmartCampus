@@ -1,3 +1,4 @@
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import CampusMap from "@/components/campus-map";
 import NavigationOverlay from "@/components/navigation-overlay";
 import { colors, s } from "@/constants/campus";
@@ -45,6 +46,7 @@ const places = locations.flatMap((item) => {
 });
 
 export default function MapScreen() {
+  const styles = useAdaptiveStyles(baseStyles);
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const [category, setCategory] = useState("Tất cả");
@@ -527,7 +529,7 @@ export default function MapScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   topBar: {
     position: "absolute",
     top: 16,
@@ -720,3 +722,5 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
 });
+
+const styles = baseStyles;

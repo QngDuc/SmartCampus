@@ -3,7 +3,8 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen, Button } from '@/components/campus-ui';
-import { colors, s } from '@/constants/campus';
+import { colors, s as baseStyles } from '@/constants/campus';
+import { useAdaptiveStyles } from '@/components/theme-provider';
 
 import { showAlert } from '@/utils/feedback';
 import { useAuth } from '@/components/auth-provider';
@@ -12,6 +13,7 @@ import { AuthLoadingOverlay } from '@/components/auth-loading-overlay';
 import { describeSync } from '@/utils/academic';
 
 export default function LoginScreen() {
+  const s = useAdaptiveStyles(baseStyles);
   const { signIn } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');

@@ -1,3 +1,4 @@
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
 
@@ -10,6 +11,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
 
 export default function TabTwoScreen() {
+  const styles = useAdaptiveStyles(baseStyles);
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
@@ -98,7 +100,7 @@ export default function TabTwoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   headerImage: {
     color: '#808080',
     bottom: -90,
@@ -110,3 +112,5 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 });
+
+const styles = baseStyles;

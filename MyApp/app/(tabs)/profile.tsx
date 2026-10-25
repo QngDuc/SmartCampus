@@ -1,3 +1,4 @@
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -60,6 +61,7 @@ function showMessage(title: string, message: string) {
 }
 
 export default function ProfileScreen() {
+  const s = useAdaptiveStyles(baseStyles);
   const { user, signOut, updateProfile } = useAuth();
   const [data, setData] = useState<Profile>(() => profileFromUser(user));
   const [draft, setDraft] = useState<Profile>(() => profileFromUser(user));
@@ -254,7 +256,7 @@ export default function ProfileScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   modalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15,23,42,0.35)' },
   loadingCard: { alignItems: 'center', padding: 26, borderRadius: 20, backgroundColor: '#fff', minWidth: 230, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 18, elevation: 8 },
   loadingTitle: { marginTop: 14, color: '#172554', fontSize: 16, fontWeight: '800' },
@@ -289,3 +291,5 @@ const s = StyleSheet.create({
   action: { flex: 1, color: '#334155', fontSize: 14, fontWeight: '600' },
   logout: { flex: 1, color: '#DC2626', fontSize: 14, fontWeight: '600' },
 });
+
+const s = baseStyles;

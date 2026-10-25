@@ -1,3 +1,5 @@
+import { useAppTheme } from '@/components/theme-provider';
+import { useAdaptiveStyles } from '@/components/theme-provider';
 import {
   ActivityIndicator,
   Image,
@@ -27,6 +29,11 @@ type QuickAction = {
   badge?: number;
 };
 
+const darkActionTints: Record<string, string> = {
+  '#EFF6FF': '#1B2D45', '#F0FDF4': '#193229', '#FFFBEB': '#3A301D',
+  '#F5F3FF': '#2D2640', '#FFF1F2': '#3A242D', '#ECFEFF': '#1B3339',
+};
+function darkActionTint(lightTint: string) { return darkActionTints[lightTint] ?? '#1B2A40'; }
 const QUICK_ACTIONS: QuickAction[] = [
   { label: 'Điểm', icon: 'stats-chart-outline', route: '/(tabs)/grades', tint: '#EFF6FF', color: '#2563EB' },
   { label: 'TKB', icon: 'calendar-outline', route: '/(tabs)/schedule', tint: '#F0FDF4', color: '#16A34A' },
@@ -37,6 +44,8 @@ const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 export default function HomeScreen() {
+  const { isDark } = useAppTheme();
+  const styles = useAdaptiveStyles(baseStyles);
   const { user, grades, timetable, isSyncing } = useAuth();
   const gradeSummary = calculateGpa(grades ? parseCourseGrades(grades.tables) : []);
   const weekdays = ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
@@ -200,7 +209,7 @@ export default function HomeScreen() {
                   style={({ pressed }) => [styles.quickActionItem, pressed && styles.pressed]}
                   onPress={() => router.push(action.route)}
                 >
-                  <View style={[styles.actionIconCircle, { backgroundColor: action.tint }]}>
+                  <View style={[styles.actionIconCircle, { backgroundColor: isDark ? darkActionTint(action.tint) : action.tint }]}>
                     <Ionicons name={action.icon} size={22} color={action.color} />
                     {action.badge ? (
                       <View style={styles.badgeCountCircle}>
@@ -374,7 +383,7 @@ const cardShadow = Platform.select({
   },
 });
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.985 }],
@@ -772,3 +781,4 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 });
+const styles = baseStyles;
