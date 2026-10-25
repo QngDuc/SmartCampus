@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppState } from "react-native";
 import { buildSteps, getNextStep } from "@/data/navigationSteps";
 import { getTrackHeading, type GpxTrack } from "@/data/gpxTracks";
 
@@ -12,14 +13,31 @@ export function useGpxNavigation() {
 
   useEffect(() => {
     if (!track) return;
-    const timer = setInterval(() => {
-      setState((current) =>
-        current && current.step < current.track.route.length - 1
-          ? { ...current, step: current.step + 1 }
-          : current,
-      );
-    }, track.stepMs);
-    return () => clearInterval(timer);
+    const last = track.route.length - 1;
+    let index = 0;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const halt = () => {
+      if (timer !== undefined) clearInterval(timer);
+      timer = undefined;
+    };
+    const run = () => {
+      if (timer !== undefined || index >= last) return;
+      timer = setInterval(() => {
+        index += 1;
+        setState({ track, step: index });
+        // Tới điểm cuối thì dừng hẳn đồng hồ, không đánh thức app mỗi giây nữa.
+        if (index >= last) halt();
+      }, track.stepMs);
+    };
+    // Tạm dừng khi app chạy nền, tiếp tục từ đúng điểm đó khi quay lại.
+    if (AppState.currentState === "active") run();
+    const subscription = AppState.addEventListener("change", (next) =>
+      next === "active" ? run() : halt(),
+    );
+    return () => {
+      halt();
+      subscription.remove();
+    };
   }, [track]);
 
   const steps = useMemo(

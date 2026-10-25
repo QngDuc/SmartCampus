@@ -1,19 +1,14 @@
 import { fromDiagram, locationCoordinates, type Coordinate } from "./campusMap";
+import { campusBoundary } from "./campusBoundary";
 import { surveyedJunctions, surveyedLinks } from "./surveyedPaths";
 
-// Phạm vi tham khảo số hóa từ ảnh người dùng, không phải ranh giới địa chính.
-export const campusBoundary = [
-  [75, 420],
-  [400, 20],
-  [860, 510],
-  [690, 865],
-  [100, 540],
-].map(([x, y]) => fromDiagram(x, y));
+export { campusBoundary };
+const BOUNDS_PADDING = 0.0003;
 export const campusBounds = {
-  south: Math.min(...campusBoundary.map((p) => p.latitude)),
-  north: Math.max(...campusBoundary.map((p) => p.latitude)),
-  west: Math.min(...campusBoundary.map((p) => p.longitude)),
-  east: Math.max(...campusBoundary.map((p) => p.longitude)),
+  south: Math.min(...campusBoundary.map((p) => p.latitude)) - BOUNDS_PADDING,
+  north: Math.max(...campusBoundary.map((p) => p.latitude)) + BOUNDS_PADDING,
+  west: Math.min(...campusBoundary.map((p) => p.longitude)) - BOUNDS_PADDING,
+  east: Math.max(...campusBoundary.map((p) => p.longitude)) + BOUNDS_PADDING,
 };
 export function insideCampus(p: Coordinate) {
   let inside = false;
@@ -99,6 +94,7 @@ const anchors: Record<number, string> = {
   14: "school",
   15: "ag_0",
   16: "ktx_0",
+  17: "hall400_0",
   100: "gate",
 };
 const nodes = { ...junctions };
@@ -136,38 +132,75 @@ export function canRoute(id: number) {
   return !!anchors[id];
 }
 
-// Dijkstra chạy cục bộ trên mạng lối đi, không gọi API và không đưa tuyến ra ngoài trường.
-export function findCampusRoute(
-  startId: number,
-  endId: number,
-): CampusRoute | null {
-  if (!canRoute(startId) || !canRoute(endId)) return null;
+// Danh sách kề dựng một lần khi nạp module: mỗi lần tính đường không còn quét lại
+// toàn bộ lối đi và không tính lại khoảng cách giữa các nút.
+type Edge = { to: string; cost: number };
+const adjacency = new Map<string, Edge[]>();
+for (const id of Object.keys(nodes)) adjacency.set(id, []);
+for (const [a, b] of links) {
+  const cost = distance(nodes[a], nodes[b]);
+  adjacency.get(a)!.push({ to: b, cost });
+  adjacency.get(b)!.push({ to: a, cost });
+}
+
+// Hàng đợi ưu tiên (heap nhị phân) thay cho việc quét toàn bộ tập nút chưa duyệt.
+function popMin(heap: [number, string][]): [number, string] {
+  const top = heap[0];
+  const last = heap.pop()!;
+  if (heap.length) {
+    heap[0] = last;
+    let i = 0;
+    for (;;) {
+      const l = 2 * i + 1,
+        r = l + 1;
+      let m = i;
+      if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+      if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+      if (m === i) break;
+      [heap[i], heap[m]] = [heap[m], heap[i]];
+      i = m;
+    }
+  }
+  return top;
+}
+function pushHeap(heap: [number, string][], item: [number, string]) {
+  heap.push(item);
+  let i = heap.length - 1;
+  while (i > 0) {
+    const parent = (i - 1) >> 1;
+    if (heap[parent][0] <= heap[i][0]) break;
+    [heap[parent], heap[i]] = [heap[i], heap[parent]];
+    i = parent;
+  }
+}
+
+function computeRoute(startId: number, endId: number): CampusRoute | null {
   const start = `p${startId}`,
     end = `p${endId}`;
-  const costs: Record<string, number> = { [start]: 0 };
-  const previous: Record<string, string> = {};
-  const pending = new Set(Object.keys(nodes));
-  while (pending.size) {
-    const next = [...pending].reduce((a, b) =>
-      (costs[a] ?? Infinity) <= (costs[b] ?? Infinity) ? a : b,
-    );
-    if (!Number.isFinite(costs[next])) break;
-    pending.delete(next);
+  const costs = new Map<string, number>([[start, 0]]);
+  const previous = new Map<string, string>();
+  const done = new Set<string>();
+  const heap: [number, string][] = [[0, start]];
+  while (heap.length) {
+    const [cost, next] = popMin(heap);
+    if (done.has(next)) continue;
+    done.add(next);
     if (next === end) break;
-    for (const [a, b] of links) {
-      const neighbor = a === next ? b : b === next ? a : undefined;
-      if (!neighbor || !pending.has(neighbor)) continue;
-      const cost = costs[next] + distance(nodes[next], nodes[neighbor]);
-      if (cost < (costs[neighbor] ?? Infinity)) {
-        costs[neighbor] = cost;
-        previous[neighbor] = next;
+    for (const edge of adjacency.get(next)!) {
+      if (done.has(edge.to)) continue;
+      const total = cost + edge.cost;
+      if (total < (costs.get(edge.to) ?? Infinity)) {
+        costs.set(edge.to, total);
+        previous.set(edge.to, next);
+        pushHeap(heap, [total, edge.to]);
       }
     }
   }
-  if (!Number.isFinite(costs[end])) return null;
+  const total = costs.get(end);
+  if (total === undefined || !done.has(end)) return null;
   const ids = [end];
   while (ids[0] !== start) {
-    const parent = previous[ids[0]];
+    const parent = previous.get(ids[0]);
     if (!parent) return null;
     ids.unshift(parent);
   }
@@ -175,25 +208,40 @@ export function findCampusRoute(
     .map((id) => nodes[id])
     .filter((p, index, all) => !index || distance(p, all[index - 1]) > 0.2);
   // Kiểm tra cả đoạn thay vì chỉ hai đầu để không đi xuyên ra ngoài đa giác giới hạn.
-  if (
-    points.some(
-      (p, i) =>
-        !insideCampus(p) ||
-        (i > 0 &&
-          Array.from({ length: 20 }, (_, n) => {
-            const t = n / 20,
-              a = points[i - 1];
-            return !insideCampus({
-              latitude: a.latitude + (p.latitude - a.latitude) * t,
-              longitude: a.longitude + (p.longitude - a.longitude) * t,
-            });
-          }).some(Boolean)),
-    )
-  )
-    return null;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    if (!insideCampus(p)) return null;
+    if (i === 0) continue;
+    const a = points[i - 1];
+    for (let n = 0; n < 20; n++) {
+      const t = n / 20;
+      if (
+        !insideCampus({
+          latitude: a.latitude + (p.latitude - a.latitude) * t,
+          longitude: a.longitude + (p.longitude - a.longitude) * t,
+        })
+      )
+        return null;
+    }
+  }
   return {
     points,
-    meters: Math.round(costs[end]),
-    minutes: Math.max(1, Math.ceil(costs[end] / 75)),
+    meters: Math.round(total),
+    minutes: Math.max(1, Math.ceil(total / 75)),
   };
+}
+
+// Mạng đường cố định trong app nên kết quả của mỗi cặp điểm luôn giống nhau:
+// tính một lần rồi dùng lại (kể cả kết quả "không có đường").
+const routeCache = new Map<string, CampusRoute | null>();
+
+// Dijkstra chạy cục bộ trên mạng lối đi, không gọi API và không đưa tuyến ra ngoài trường.
+export function findCampusRoute(
+  startId: number,
+  endId: number,
+): CampusRoute | null {
+  if (!canRoute(startId) || !canRoute(endId)) return null;
+  const key = `${startId}>${endId}`;
+  if (!routeCache.has(key)) routeCache.set(key, computeRoute(startId, endId));
+  return routeCache.get(key) ?? null;
 }

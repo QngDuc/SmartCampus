@@ -131,6 +131,14 @@ export const locations = [
       "Khu ký túc xá KTX Lào, vị trí lấy từ điểm bắt đầu tuyến GPS đã ghi; chưa xác nhận cửa vào.",
     hours: "Theo quy định của ký túc xá",
   },
+  {
+    id: 17,
+    name: "Hội trường 400 chỗ",
+    category: "Giảng đường",
+    description:
+      "Hội trường 400 chỗ, vị trí lấy từ điểm đầu tuyến GPS đã ghi.",
+    hours: "Theo lịch hoạt động",
+  },
 ];
 export const events = [
   {

@@ -4,6 +4,7 @@ import {
   gpxNavigationInfo,
   gpxNavigationRoute,
 } from "./gpxNavigation";
+import { surveyedJunctions } from "./surveyedPaths";
 
 // Mỗi tuyến GPX đã ghi dùng cho chế độ mô phỏng điều hướng 3D.
 export type GpxTrackInfo = {
@@ -18,6 +19,8 @@ export type GpxTrackInfo = {
 
 export type GpxTrack = {
   id: string;
+  /** id địa điểm xuất phát trong data/mockData.ts */
+  originId: number;
   /** id địa điểm đích trong data/mockData.ts */
   destinationId: number;
   fromName: string;
@@ -44,10 +47,98 @@ function meters(a: Coordinate, b: Coordinate) {
   return Math.hypot(x, y) * 6371000;
 }
 
+function resampleRoute(route: Coordinate[], spacingMeters = 8): Coordinate[] {
+  const sampled: Coordinate[] = [route[0]];
+  for (let i = 1; i < route.length; i++) {
+    const start = route[i - 1];
+    const end = route[i];
+    const segments = Math.max(1, Math.ceil(meters(start, end) / spacingMeters));
+    for (let segment = 1; segment <= segments; segment++) {
+      const fraction = segment / segments;
+      sampled.push({
+        latitude: start.latitude + (end.latitude - start.latitude) * fraction,
+        longitude:
+          start.longitude + (end.longitude - start.longitude) * fraction,
+      });
+    }
+  }
+  return sampled;
+}
+
+function createRecordedTrack({
+  id,
+  originId,
+  destinationId,
+  fromName,
+  toName,
+  waypoints,
+  recordedDistanceMeters,
+  recordedDurationSeconds,
+  recordedPointCount,
+  maximumSpeedKmh,
+  minimumElevationMeters,
+  maximumElevationMeters,
+}: {
+  id: string;
+  originId: number;
+  destinationId: number;
+  fromName: string;
+  toName: string;
+  waypoints: Coordinate[];
+  recordedDistanceMeters: number;
+  recordedDurationSeconds: number;
+  recordedPointCount: number;
+  maximumSpeedKmh: number;
+  minimumElevationMeters: number;
+  maximumElevationMeters: number;
+}): GpxTrack {
+  const route = resampleRoute(waypoints);
+  const geometricCumulative = [0];
+  for (let index = 1; index < route.length; index++) {
+    geometricCumulative.push(
+      geometricCumulative[index - 1] + meters(route[index - 1], route[index]),
+    );
+  }
+  const geometryLength = geometricCumulative[geometricCumulative.length - 1];
+  const cumulative = geometricCumulative.map(
+    (distance) => (distance / geometryLength) * recordedDistanceMeters,
+  );
+  return {
+    id,
+    originId,
+    destinationId,
+    fromName,
+    toName,
+    route,
+    cumulative,
+    totalMeters: recordedDistanceMeters,
+    stepMs: Math.max(
+      1000,
+      Math.round((recordedDurationSeconds * 1000) / (route.length - 1)),
+    ),
+    metersPerMinute: Math.max(
+      1,
+      (recordedDistanceMeters / recordedDurationSeconds) * 60,
+    ),
+    paceLabel: "Theo tốc độ đã ghi",
+    info: {
+      recordedAt: "14/10/2026",
+      recordedDurationSeconds,
+      recordedPointCount,
+      averageSpeedKmh:
+        (recordedDistanceMeters / recordedDurationSeconds) * 3.6,
+      maximumSpeedKmh,
+      minimumElevationMeters,
+      maximumElevationMeters,
+    },
+  };
+}
+
 // Track KTX Lào → Nhà số 7: giữ nguyên dữ liệu cũ trong gpxNavigation.ts.
 const ktxTotal = getRemainingGpxDistance(0);
 export const ktxLaosToHouse7: GpxTrack = {
   id: "ktx-laos-nha-7",
+  originId: 16,
   destinationId: 7,
   fromName: "KTX Lào",
   toName: "Nhà số 7",
@@ -60,6 +151,22 @@ export const ktxLaosToHouse7: GpxTrack = {
   metersPerMinute: 75,
   paceLabel: "Đi bộ",
   info: gpxNavigationInfo,
+};
+const house7ToKtxLaos: GpxTrack = {
+  ...ktxLaosToHouse7,
+  id: "nha-7-ktx-lao",
+  originId: 7,
+  destinationId: 16,
+  fromName: ktxLaosToHouse7.toName,
+  toName: ktxLaosToHouse7.fromName,
+  route: [...ktxLaosToHouse7.route].reverse(),
+  cumulative: [...ktxLaosToHouse7.cumulative]
+    .reverse()
+    .map(
+      (distance) =>
+        ktxLaosToHouse7.cumulative[ktxLaosToHouse7.cumulative.length - 1] -
+        distance,
+    ),
 };
 
 // Track_Nong_nghiep_-_cong_truoc.gpx (91 điểm, ghi 14/10/2026 16:22:08–16:23:38).
@@ -166,6 +273,7 @@ const nongNghiepTotal = Math.round(
 );
 export const nongNghiepToMainGate: GpxTrack = {
   id: "nong-nghiep-cong-truoc",
+  originId: 15,
   destinationId: 10,
   fromName: "Nhà Nông nghiệp",
   toName: "Cổng chính",
@@ -185,10 +293,172 @@ export const nongNghiepToMainGate: GpxTrack = {
     maximumElevationMeters: 426,
   },
 };
+const mainGateToNongNghiep: GpxTrack = {
+  ...nongNghiepToMainGate,
+  id: "cong-truoc-nong-nghiep",
+  originId: 10,
+  destinationId: 15,
+  fromName: nongNghiepToMainGate.toName,
+  toName: nongNghiepToMainGate.fromName,
+  route: [...nongNghiepToMainGate.route].reverse(),
+  cumulative: [...nongNghiepToMainGate.cumulative]
+    .reverse()
+    .map(
+      (distance) =>
+        nongNghiepToMainGate.cumulative[
+          nongNghiepToMainGate.cumulative.length - 1
+        ] - distance,
+    ),
+};
 
-export const gpxTracks = [ktxLaosToHouse7, nongNghiepToMainGate];
-export const gpxTrackByDestination: Partial<Record<number, GpxTrack>> =
-  Object.fromEntries(gpxTracks.map((track) => [track.destinationId, track]));
+const routeFromSurveyed = (prefix: string, count: number) =>
+  Array.from(
+    { length: count },
+    (_, index) => surveyedJunctions[`${prefix}_${index}`],
+  );
+
+export const hall400ToKtxLaos = createRecordedTrack({
+  id: "hoi-truong-400-ktx-lao",
+  originId: 17,
+  destinationId: 16,
+  fromName: "Hội trường 400 chỗ",
+  toName: "KTX Lào",
+  waypoints: routeFromSurveyed("hall400", 12),
+  recordedDistanceMeters: 306,
+  recordedDurationSeconds: 246,
+  recordedPointCount: 247,
+  maximumSpeedKmh: 18.5,
+  minimumElevationMeters: 422.7,
+  maximumElevationMeters: 427.2,
+});
+const ktxLaosToHall400: GpxTrack = {
+  ...hall400ToKtxLaos,
+  id: "ktx-lao-hoi-truong-400",
+  originId: 16,
+  destinationId: 17,
+  fromName: hall400ToKtxLaos.toName,
+  toName: hall400ToKtxLaos.fromName,
+  route: [...hall400ToKtxLaos.route].reverse(),
+  cumulative: [...hall400ToKtxLaos.cumulative]
+    .reverse()
+    .map(
+      (distance) =>
+        hall400ToKtxLaos.cumulative[
+          hall400ToKtxLaos.cumulative.length - 1
+        ] - distance,
+    ),
+};
+
+export const ktxLaosToNongNghiep = createRecordedTrack({
+  id: "ktx-lao-nong-nghiep",
+  originId: 16,
+  destinationId: 15,
+  fromName: "KTX Lào",
+  toName: "Nhà Nông Lâm",
+  waypoints: routeFromSurveyed("ktxAg", 8),
+  recordedDistanceMeters: 179,
+  recordedDurationSeconds: 71,
+  recordedPointCount: 31,
+  maximumSpeedKmh: 26.1,
+  minimumElevationMeters: 417.7,
+  maximumElevationMeters: 426.8,
+});
+const nongNghiepToKtxLaos: GpxTrack = {
+  ...ktxLaosToNongNghiep,
+  id: "nha-nong-lam-ktx-lao",
+  originId: 15,
+  destinationId: 16,
+  fromName: ktxLaosToNongNghiep.toName,
+  toName: ktxLaosToNongNghiep.fromName,
+  route: [...ktxLaosToNongNghiep.route].reverse(),
+  cumulative: [...ktxLaosToNongNghiep.cumulative]
+    .reverse()
+    .map(
+      (distance) =>
+        ktxLaosToNongNghiep.cumulative[
+          ktxLaosToNongNghiep.cumulative.length - 1
+        ] - distance,
+    ),
+};
+
+export const house6ToKtxLaos = createRecordedTrack({
+  id: "nha-6-ktx-lao",
+  originId: 6,
+  destinationId: 16,
+  fromName: "Nhà số 6",
+  toName: "KTX Lào",
+  waypoints: routeFromSurveyed("house6Ktx", 12),
+  recordedDistanceMeters: 244,
+  recordedDurationSeconds: 189,
+  recordedPointCount: 185,
+  maximumSpeedKmh: 32.1,
+  minimumElevationMeters: 423.5,
+  maximumElevationMeters: 426.4,
+});
+const ktxLaosToHouse6: GpxTrack = {
+  ...house6ToKtxLaos,
+  id: "ktx-lao-nha-6",
+  originId: 16,
+  destinationId: 6,
+  fromName: house6ToKtxLaos.toName,
+  toName: house6ToKtxLaos.fromName,
+  route: [...house6ToKtxLaos.route].reverse(),
+  cumulative: [...house6ToKtxLaos.cumulative]
+    .reverse()
+    .map(
+      (distance) =>
+        house6ToKtxLaos.cumulative[
+          house6ToKtxLaos.cumulative.length - 1
+        ] - distance,
+    ),
+};
+
+export const house2ToKtxLaos = createRecordedTrack({
+  id: "nha-2-ktx-lao",
+  originId: 2,
+  destinationId: 16,
+  fromName: "Nhà số 2",
+  toName: "KTX Lào",
+  waypoints: routeFromSurveyed("house2Ktx", 16),
+  recordedDistanceMeters: 295,
+  recordedDurationSeconds: 252,
+  recordedPointCount: 254,
+  maximumSpeedKmh: 18.5,
+  minimumElevationMeters: 423,
+  maximumElevationMeters: 427.1,
+});
+const ktxLaosToHouse2: GpxTrack = {
+  ...house2ToKtxLaos,
+  id: "ktx-lao-nha-2",
+  originId: 16,
+  destinationId: 2,
+  fromName: house2ToKtxLaos.toName,
+  toName: house2ToKtxLaos.fromName,
+  route: [...house2ToKtxLaos.route].reverse(),
+  cumulative: [...house2ToKtxLaos.cumulative]
+    .reverse()
+    .map(
+      (distance) =>
+        house2ToKtxLaos.cumulative[
+          house2ToKtxLaos.cumulative.length - 1
+        ] - distance,
+    ),
+};
+
+export const gpxTracks = [
+  ktxLaosToHouse7,
+  house7ToKtxLaos,
+  nongNghiepToMainGate,
+  mainGateToNongNghiep,
+  hall400ToKtxLaos,
+  ktxLaosToHall400,
+  ktxLaosToNongNghiep,
+  nongNghiepToKtxLaos,
+  house6ToKtxLaos,
+  ktxLaosToHouse6,
+  house2ToKtxLaos,
+  ktxLaosToHouse2,
+];
 
 /** Hướng (độ, 0 = Bắc) nhìn trước ≥ 10 m để không bị rung khi GPS đứng yên/nhiễu. */
 export function getTrackHeading(track: GpxTrack, index: number) {

@@ -3,7 +3,7 @@ import type { CircleMarker, Map as LeafletMap, TileLayer } from "leaflet";
 // CSS Leaflet giữ nguyên bố cục, bỏ icon bitmap không dùng vì Metro chưa hỗ trợ URL tương đối trong CSS.
 import "@/assets/styles/leaflet.css";
 import { campusMap } from "@/data/campusMap";
-import { campusBoundary, campusBounds, walkways } from "@/data/campusRouting";
+import { campusBoundary, campusBounds } from "@/data/campusRouting";
 import type { CampusMapProps } from "./campus-map.types";
 
 export default function CampusMap(props: CampusMapProps) {
@@ -12,6 +12,8 @@ export default function CampusMap(props: CampusMapProps) {
   const tiles = useRef<TileLayer | null>(null);
   const library = useRef<typeof import("leaflet") | null>(null);
   const markers = useRef(new Map<number, CircleMarker>());
+  const navMarker = useRef<CircleMarker | null>(null);
+  const navigating = props.navigation !== undefined;
   const current = useRef(props);
   // Lưu instance thay vì boolean: retry luôn kích hoạt lại các effect lớp ghim,
   // kể cả khi import đã cache và React gộp các lần cập nhật state rất nhanh.
@@ -103,20 +105,8 @@ export default function CampusMap(props: CampusMapProps) {
           color: "#15803D",
           weight: 2,
           fill: false,
-          dashArray: "6 5",
           interactive: false,
         }).addTo(instance);
-        walkways.forEach((segment) =>
-          L.polyline(
-            segment.map((p) => [p.latitude, p.longitude]),
-            {
-              color: "#94A3B8",
-              weight: 3,
-              dashArray: "5 6",
-              interactive: false,
-            },
-          ).addTo(instance!),
-        );
         L.control.scale({ imperial: false }).addTo(instance);
         if (typeof ResizeObserver !== "undefined") {
           observer = new ResizeObserver(() =>
@@ -297,20 +287,30 @@ export default function CampusMap(props: CampusMapProps) {
   useEffect(() => {
     const L = library.current;
     const instance = map.current;
-    if (!ready || !L || !instance || !props.navigation) return;
-    const { latitude, longitude } = props.navigation.coordinate;
-    const marker = L.circleMarker([latitude, longitude], {
+    const start = current.current.navigation?.coordinate;
+    if (!ready || !L || !instance || !navigating || !start) return;
+    const marker = L.circleMarker([start.latitude, start.longitude], {
       radius: 9,
       color: "#fff",
       weight: 3,
       fillColor: "#1A73E8",
       fillOpacity: 1,
     }).addTo(instance);
-    instance.panTo([latitude, longitude], { animate: true });
+    navMarker.current = marker;
     return () => {
       marker.remove();
+      navMarker.current = null;
     };
-  }, [props.navigation, ready]);
+  }, [navigating, ready]);
+
+  useEffect(() => {
+    const coordinate = props.navigation?.coordinate;
+    if (!navMarker.current || !coordinate) return;
+    navMarker.current.setLatLng([coordinate.latitude, coordinate.longitude]);
+    map.current?.panTo([coordinate.latitude, coordinate.longitude], {
+      animate: true,
+    });
+  }, [props.navigation]);
 
   return (
     <div

@@ -8,7 +8,7 @@ import {
   type Coordinate,
 } from "@/data/campusMap";
 import { canRoute, findCampusRoute, insideCampus } from "@/data/campusRouting";
-import { gpxTrackByDestination } from "@/data/gpxTracks";
+import { gpxTracks } from "@/data/gpxTracks";
 import { locationImages } from "@/data/locationImages";
 import { locations } from "@/data/mockData";
 import { useGpxNavigation } from "@/hooks/use-gpx-navigation";
@@ -44,6 +44,8 @@ const places = locations.flatMap((item) => {
     : [];
 });
 
+const noPlaces: typeof places = [];
+
 export default function MapScreen() {
   const { width } = useWindowDimensions();
   const wide = width >= 900;
@@ -53,9 +55,7 @@ export default function MapScreen() {
     directions?: string;
   }>();
   const requestedLocationId = Number(params.locationId);
-  const selectedId = locations.some(
-    (place) => place.id === requestedLocationId,
-  )
+  const selectedId = locations.some((place) => place.id === requestedLocationId)
     ? requestedLocationId
     : undefined;
   const [originId, setOriginId] = useState(10);
@@ -83,7 +83,29 @@ export default function MapScreen() {
   const origin = locations.find((place) => place.id === originId)!;
   const nav = useGpxNavigation();
   const navigationActive = nav.active;
-  const demoTrack = selected ? gpxTrackByDestination[selected.id] : undefined;
+  const visiblePlaces = useMemo(
+    () =>
+      navigationActive
+        ? noPlaces
+        : category === "Tất cả"
+          ? places
+          : places.filter(
+              (p) =>
+                locations.find((l) => l.id === p.id)?.category === category,
+            ),
+    [navigationActive, category],
+  );
+  const demoTracks = useMemo(
+    () =>
+      selectedId !== undefined
+        ? gpxTracks.filter(
+            (track) =>
+              track.originId === originId &&
+              track.destinationId === selectedId,
+          )
+        : [],
+    [originId, selectedId],
+  );
   // Tính đường trên đồ thị nội bộ trong bộ nhớ, không đợi API định tuyến.
   const route = useMemo(
     () =>
@@ -92,10 +114,14 @@ export default function MapScreen() {
         : null,
     [originId, selectedId, showRoute],
   );
-  const results = locations.filter(
-    (place) =>
-      normalize(place.name).includes(normalize(search)) &&
-      (picker !== "origin" || canRoute(place.id)),
+  const results = useMemo(
+    () =>
+      locations.filter(
+        (place) =>
+          normalize(place.name).includes(normalize(search)) &&
+          (picker !== "origin" || canRoute(place.id)),
+      ),
+    [search, picker],
   );
 
   function selectPlace(id: number) {
@@ -129,10 +155,13 @@ export default function MapScreen() {
       ]);
       if (request.current !== id) return;
       if (!insideCampus(position.coords)) {
-        setUserLocation(null);
+        const gate = locationCoordinates[10] ?? campusMap.center;
+        setUserLocation(gate);
+        setOriginId(10);
+        setCenter(gate);
         showAlert(
-          "Bạn đang ngoài khu vực trường",
-          "Bản đồ chỉ hỗ trợ khuôn viên Đại học Tây Nguyên. Chọn cổng chính hoặc cổng sau làm điểm xuất phát.",
+          "Bạn đang ở ngoài trường",
+          "Vị trí của bạn được đặt tại cổng chính. Bạn có thể đổi điểm xuất phát bất cứ lúc nào.",
         );
         return;
       }
@@ -170,17 +199,7 @@ export default function MapScreen() {
       <View style={styles.mapArea}>
         <CampusMap
           center={center}
-          places={
-            navigationActive
-              ? []
-              : category === "Tất cả"
-                ? places
-                : places.filter(
-                    (p) =>
-                      locations.find((l) => l.id === p.id)?.category ===
-                      category,
-                  )
-          }
+          places={visiblePlaces}
           selectedId={navigationActive ? undefined : selectedId}
           userLocation={navigationActive ? null : userLocation}
           onSelect={selectPlace}
@@ -281,246 +300,279 @@ export default function MapScreen() {
               </ScrollView>
             )}
           </View>
-      {selected && (
-        <View
-          style={[
-            styles.detailPanel,
-            wide ? styles.desktopPanel : styles.mobilePanel,
-          ]}
-        >
-          <ScrollView key={selected.id} showsVerticalScrollIndicator={false}>
-            <View style={styles.hero}>
-              {locationImages[selected.id] ? (
-                <Image
-                  source={locationImages[selected.id]}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  accessibilityLabel={`Ảnh ${selected.name}`}
-                />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Ionicons name="images-outline" size={44} color="#007C91" />
-                  <Text style={styles.photoCaption}>Chưa có ảnh địa điểm</Text>
-                </View>
-              )}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Đóng chi tiết địa điểm"
-                style={styles.closeDetail}
-                onPress={() => {
-                  router.setParams({ locationId: "", directions: "0" });
-                }}
+          {selected && (
+            <View
+              style={[
+                styles.detailPanel,
+                wide ? styles.desktopPanel : styles.mobilePanel,
+              ]}
+            >
+              <ScrollView
+                key={selected.id}
+                showsVerticalScrollIndicator={false}
               >
-                <Ionicons name="close" size={23} color="#3C4043" />
-              </Pressable>
-            </View>
-            <View style={styles.detailBody}>
-              <Text style={styles.placeTitle}>{selected.name}</Text>
-              <Text style={styles.categoryText}>
-                {selected.category} · Đại học Tây Nguyên
-              </Text>
-            </View>
-            <View style={styles.overviewTab}>
-              <Text style={styles.overviewText}>Tổng quan</Text>
-            </View>
-            <View style={styles.actions}>
-              <Pressable
-                accessibilityRole="button"
-                disabled={!canRoute(selected.id)}
-                style={styles.action}
-                onPress={() => {
-                  router.setParams({ directions: "1" });
-                }}
-              >
-                <View
-                  style={[
-                    styles.actionCircle,
-                    {
-                      backgroundColor: canRoute(selected.id)
-                        ? "#007F92"
-                        : "#94A3B8",
-                    },
-                  ]}
-                >
-                  <Ionicons name="navigate" size={23} color="white" />
+                <View style={styles.hero}>
+                  {locationImages[selected.id] ? (
+                    <Image
+                      source={locationImages[selected.id]}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      accessibilityLabel={`Ảnh ${selected.name}`}
+                    />
+                  ) : (
+                    <View style={styles.photoPlaceholder}>
+                      <Ionicons
+                        name="images-outline"
+                        size={44}
+                        color="#007C91"
+                      />
+                      <Text style={styles.photoCaption}>
+                        Chưa có ảnh địa điểm
+                      </Text>
+                    </View>
+                  )}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đóng chi tiết địa điểm"
+                    style={styles.closeDetail}
+                    onPress={() => {
+                      router.setParams({ locationId: "", directions: "0" });
+                    }}
+                  >
+                    <Ionicons name="close" size={23} color="#3C4043" />
+                  </Pressable>
                 </View>
-                <Text style={styles.actionLabel}>Đường đi</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.action}
-                onPress={() => openPicker("origin")}
-              >
-                <View style={styles.actionCircle}>
-                  <Ionicons
-                    name="radio-button-on-outline"
-                    size={23}
-                    color="#007F92"
-                  />
-                </View>
-                <Text style={styles.actionLabel}>Điểm xuất phát</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.action}
-                onPress={() =>
-                  router.push({
-                    pathname: "/location-detail",
-                    params: { id: String(selected.id) },
-                  })
-                }
-              >
-                <View style={styles.actionCircle}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={23}
-                    color="#007F92"
-                  />
-                </View>
-                <Text style={styles.actionLabel}>Chi tiết</Text>
-              </Pressable>
-            </View>
-            <View style={styles.detailBody}>
-              <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={24} color="#008698" />
-                <Text style={styles.infoText}>567 Lê Duẩn, Đắk Lắk</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="time-outline" size={24} color="#008698" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.infoText}>{selected.hours}</Text>
+                <View style={styles.detailBody}>
+                  <Text style={styles.placeTitle}>{selected.name}</Text>
                   <Text style={styles.categoryText}>
-                    Giờ hoạt động tham khảo
+                    {selected.category} · Đại học Tây Nguyên
                   </Text>
                 </View>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="reader-outline" size={24} color="#008698" />
-                <Text style={styles.infoText}>{selected.description}</Text>
-              </View>
-              {showRoute && (
-                <View style={styles.routeCard}>
-                  <Text style={styles.routeTitle}>
-                    {demoTrack
-                      ? `${Math.max(1, Math.ceil(demoTrack.totalMeters / demoTrack.metersPerMinute))} phút · ${demoTrack.totalMeters} m`
-                      : route
-                        ? `${route.minutes} phút · ${route.meters} m`
-                        : "Chưa có tuyến đi bộ phù hợp"}
-                  </Text>
-                  <Text style={styles.infoText}>
-                    {demoTrack
-                      ? `${demoTrack.fromName} → ${demoTrack.toName}`
-                      : `${origin.name} → ${selected.name}`}
-                  </Text>
-                  <Text style={styles.notice}>
-                    {demoTrack
-                      ? "Tuyến GPS đã ghi, dùng để chạy thử mô phỏng; chưa có định vị trực tiếp."
-                      : "Tuyến tham khảo theo sơ đồ, chưa khảo sát lối đi thực tế."}
-                  </Text>
-                  {demoTrack && (
-                    <>
-                      <Text style={styles.gpxDetails}>
-                        Ghi ngày {demoTrack.info.recordedAt} ·{" "}
-                        {demoTrack.info.recordedPointCount} điểm GPS ·{" "}
-                        {Math.floor(demoTrack.info.recordedDurationSeconds / 60)}:
-                        {String(demoTrack.info.recordedDurationSeconds % 60).padStart(2, "0")}
+                <View style={styles.overviewTab}>
+                  <Text style={styles.overviewText}>Tổng quan</Text>
+                </View>
+                <View style={styles.actions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={!canRoute(selected.id)}
+                    style={styles.action}
+                    onPress={() => {
+                      router.setParams({ directions: "1" });
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.actionCircle,
+                        {
+                          backgroundColor: canRoute(selected.id)
+                            ? "#007F92"
+                            : "#94A3B8",
+                        },
+                      ]}
+                    >
+                      <Ionicons name="navigate" size={23} color="white" />
+                    </View>
+                    <Text style={styles.actionLabel}>Đường đi</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    style={styles.action}
+                    onPress={() => openPicker("origin")}
+                  >
+                    <View style={styles.actionCircle}>
+                      <Ionicons
+                        name="radio-button-on-outline"
+                        size={23}
+                        color="#007F92"
+                      />
+                    </View>
+                    <Text style={styles.actionLabel}>Điểm xuất phát</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    style={styles.action}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/location-detail",
+                        params: { id: String(selected.id) },
+                      })
+                    }
+                  >
+                    <View style={styles.actionCircle}>
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={23}
+                        color="#007F92"
+                      />
+                    </View>
+                    <Text style={styles.actionLabel}>Chi tiết</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.detailBody}>
+                  <View style={styles.infoRow}>
+                    <Ionicons
+                      name="location-outline"
+                      size={24}
+                      color="#008698"
+                    />
+                    <Text style={styles.infoText}>567 Lê Duẩn, Đắk Lắk</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="time-outline" size={24} color="#008698" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.infoText}>{selected.hours}</Text>
+                      <Text style={styles.categoryText}>
+                        Giờ hoạt động tham khảo
                       </Text>
-                      <Text style={styles.gpxDetails}>
-                        Tốc độ TB {demoTrack.info.averageSpeedKmh.toFixed(1)} km/h · tối đa{" "}
-                        {demoTrack.info.maximumSpeedKmh.toFixed(1)} km/h
+                    </View>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="reader-outline" size={24} color="#008698" />
+                    <Text style={styles.infoText}>{selected.description}</Text>
+                  </View>
+                  {showRoute && (
+                    <View style={styles.routeCard}>
+                      <Text style={styles.routeTitle}>
+                        {route
+                          ? `${route.minutes} phút · ${route.meters} m`
+                          : "Chưa có tuyến đi bộ phù hợp"}
                       </Text>
-                      <Text style={styles.gpxDetails}>
-                        Độ cao GPS: {demoTrack.info.minimumElevationMeters}–
-                        {demoTrack.info.maximumElevationMeters} m
+                      <Text style={styles.infoText}>
+                        {`${origin.name} → ${selected.name}`}
                       </Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        style={styles.startNavigationButton}
-                        onPress={() => nav.start(demoTrack)}
-                      >
-                        <Ionicons name="navigate" size={19} color="#fff" />
-                        <Text style={styles.startNavigationText}>
-                          Mô phỏng điều hướng 3D
+                      <Text style={styles.notice}>
+                        {route
+                          ? "Tuyến ngắn nhất theo mạng lối đi trong trường."
+                          : "Chưa tìm thấy tuyến phù hợp trong mạng lối đi."}
+                      </Text>
+                      {demoTracks.length === 0 && (
+                        <Text style={styles.notice}>
+                          Chưa có track GPS đã ghi cho đúng điểm xuất phát và
+                          điểm đến này.
                         </Text>
-                      </Pressable>
-                    </>
+                      )}
+                      {demoTracks.map((demoTrack) => (
+                        <View key={demoTrack.id} style={styles.demoTrack}>
+                          <Text style={styles.routeTitle}>
+                            {origin.name} → {selected.name} ·{" "}
+                            {Math.max(
+                              1,
+                              Math.ceil(
+                                demoTrack.totalMeters /
+                                  demoTrack.metersPerMinute,
+                              ),
+                            )}{" "}
+                            phút · {demoTrack.totalMeters} m
+                          </Text>
+                          <Text style={styles.gpxDetails}>
+                            Ghi ngày {demoTrack.info.recordedAt} ·{" "}
+                            {demoTrack.info.recordedPointCount} điểm GPS ·{" "}
+                            {Math.floor(
+                              demoTrack.info.recordedDurationSeconds / 60,
+                            )}
+                            :
+                            {String(
+                              demoTrack.info.recordedDurationSeconds % 60,
+                            ).padStart(2, "0")}
+                          </Text>
+                          <Text style={styles.gpxDetails}>
+                            Tốc độ TB{" "}
+                            {demoTrack.info.averageSpeedKmh.toFixed(1)} km/h ·
+                            tối đa {demoTrack.info.maximumSpeedKmh.toFixed(1)}{" "}
+                            km/h
+                          </Text>
+                          <Text style={styles.gpxDetails}>
+                            Độ cao GPS: {demoTrack.info.minimumElevationMeters}–
+                            {demoTrack.info.maximumElevationMeters} m
+                          </Text>
+                          <Pressable
+                            accessibilityRole="button"
+                            style={styles.startNavigationButton}
+                            onPress={() => nav.start(demoTrack)}
+                          >
+                            <Ionicons name="navigate" size={19} color="#fff" />
+                            <Text style={styles.startNavigationText}>
+                              Mô phỏng điều hướng 3D
+                            </Text>
+                          </Pressable>
+                        </View>
+                      ))}
+                    </View>
                   )}
                 </View>
-              )}
+              </ScrollView>
             </View>
-          </ScrollView>
-        </View>
-      )}
+          )}
 
-      <Modal
-        visible={picker !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPicker(null)}
-      >
-        <View style={styles.backdrop}>
-          <SafeAreaView style={styles.picker}>
-            <View style={s.between}>
-              <Text style={s.heading}>
-                {picker === "origin"
-                  ? "Điểm xuất phát"
-                  : "Điểm đến trong trường"}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Đóng danh sách"
-                onPress={() => setPicker(null)}
-                style={{ padding: 12 }}
-              >
-                <Ionicons name="close" size={24} />
-              </Pressable>
-            </View>
-            <TextInput
-              accessibilityLabel="Tìm địa điểm"
-              value={search}
-              onChangeText={setSearch}
-              style={s.input}
-              placeholder="Thư viện, nhà số 9, cổng chính..."
-            />
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              style={{ marginTop: 10 }}
-            >
-              {results.length === 0 && (
-                <Text style={s.muted}>Không tìm thấy địa điểm.</Text>
-              )}
-              {results.map((place) => (
-                <Pressable
-                  key={place.id}
-                  accessibilityRole="button"
-                  style={styles.result}
-                  onPress={() => {
-                    if (picker === "origin") {
-                      setOriginId(place.id);
-                      router.setParams({ directions: "1" });
-                    } else selectPlace(place.id);
-                    setPicker(null);
-                  }}
+          <Modal
+            visible={picker !== null}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setPicker(null)}
+          >
+            <View style={styles.backdrop}>
+              <SafeAreaView style={styles.picker}>
+                <View style={s.between}>
+                  <Text style={s.heading}>
+                    {picker === "origin"
+                      ? "Điểm xuất phát"
+                      : "Điểm đến trong trường"}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đóng danh sách"
+                    onPress={() => setPicker(null)}
+                    style={{ padding: 12 }}
+                  >
+                    <Ionicons name="close" size={24} />
+                  </Pressable>
+                </View>
+                <TextInput
+                  accessibilityLabel="Tìm địa điểm"
+                  value={search}
+                  onChangeText={setSearch}
+                  style={s.input}
+                  placeholder="Thư viện, nhà số 9, cổng chính..."
+                />
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  style={{ marginTop: 10 }}
                 >
-                  <Ionicons
-                    name="location-outline"
-                    color={colors.primary}
-                    size={22}
-                  />
-                  <View style={s.grow}>
-                    <Text style={s.label}>{place.name}</Text>
-                    <Text style={s.muted}>
-                      {canRoute(place.id)
-                        ? place.category
-                        : "Chưa có dữ liệu lối đi"}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </SafeAreaView>
-        </View>
-      </Modal>
+                  {results.length === 0 && (
+                    <Text style={s.muted}>Không tìm thấy địa điểm.</Text>
+                  )}
+                  {results.map((place) => (
+                    <Pressable
+                      key={place.id}
+                      accessibilityRole="button"
+                      style={styles.result}
+                      onPress={() => {
+                        if (picker === "origin") {
+                          setOriginId(place.id);
+                          router.setParams({ directions: "1" });
+                        } else selectPlace(place.id);
+                        setPicker(null);
+                      }}
+                    >
+                      <Ionicons
+                        name="location-outline"
+                        color={colors.primary}
+                        size={22}
+                      />
+                      <View style={s.grow}>
+                        <Text style={s.label}>{place.name}</Text>
+                        <Text style={s.muted}>
+                          {canRoute(place.id)
+                            ? place.category
+                            : "Chưa có dữ liệu lối đi"}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </SafeAreaView>
+            </View>
+          </Modal>
         </>
       )}
     </SafeAreaView>
@@ -630,6 +682,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     gap: 8,
+  },
+  demoTrack: {
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#CDE7EA",
   },
   startNavigationButton: {
     marginTop: 6,

@@ -16,6 +16,10 @@ export const campusMap: CampusMapConfig = {
 // Hai cổng lấy từ POI OpenStreetMap qua OpenFreeMap (snapshot 2026-09-13).
 const mainGate = { latitude: 12.65155538, longitude: 108.02389741 };
 const rearGate = { latitude: 12.64841486, longitude: 108.02800119 };
+export const house7GpxCoordinate: Coordinate = {
+  latitude: 12.652171,
+  longitude: 108.024829,
+};
 
 // Số hóa sơ đồ ảnh 960x910 do người dùng cung cấp, neo ở hai cổng.
 // Đây chỉ là ước lượng vị trí khu nhà, KHÔNG dùng làm đích GPS chính xác.
@@ -30,17 +34,46 @@ export function fromDiagram(x: number, y: number): Coordinate {
   };
 }
 
+// Tâm ước lượng của từng dãy trên sơ đồ; chưa có GPX khảo sát cho nhà 8 và 9.
+const house8RowCenter = fromDiagram(365, 170);
+const house9RowCenter = fromDiagram(425, 95);
+
+// Khoảng đẩy vào trong từ tọa độ gốc (đơn vị: mét); nhà 7 lấy điểm cuối GPX.
+export const inwardOffsetMeters: Partial<Record<number, number>> = {
+  7: 5,
+  8: 5,
+  9: 15,
+};
+
+function moveToward(from: Coordinate, to: Coordinate, meters: number): Coordinate {
+  const dx =
+    (to.longitude - from.longitude) *
+    Math.cos((from.latitude * Math.PI) / 180) *
+    111320;
+  const dy = (to.latitude - from.latitude) * 110574;
+  const t = Math.min(1, meters / (Math.hypot(dx, dy) || 1));
+  return {
+    latitude: from.latitude + (to.latitude - from.latitude) * t,
+    longitude: from.longitude + (to.longitude - from.longitude) * t,
+  };
+}
+
+function pullInward(id: number, point: Coordinate): Coordinate {
+  const meters = inwardOffsetMeters[id];
+  return meters ? moveToward(point, campusMap.center, meters) : point;
+}
+
 export const locationCoordinates: Partial<Record<number, Coordinate>> = {
   // Mapcarta / OpenStreetMap way 241971731: tâm khuôn viên, không phải cổng trường.
   100: campusMap.center,
   1: fromDiagram(330, 360),
-  2: fromDiagram(260, 410),
+  2: { latitude: 12.650850, longitude: 108.025011 },
   3: fromDiagram(625, 620),
   5: fromDiagram(155, 520),
   6: fromDiagram(365, 475),
-  7: fromDiagram(310, 245),
-  8: fromDiagram(365, 170),
-  9: fromDiagram(425, 95),
+  7: pullInward(7, house7GpxCoordinate),
+  8: pullInward(8, house8RowCenter),
+  9: pullInward(9, house9RowCenter),
   10: mainGate,
   11: rearGate,
   12: fromDiagram(590, 700),
@@ -48,9 +81,10 @@ export const locationCoordinates: Partial<Record<number, Coordinate>> = {
   14: { latitude: 12.65035675, longitude: 108.02887559 },
   15: { latitude: 12.651479, longitude: 108.026585 },
   16: { latitude: 12.651035, longitude: 108.027015 },
+  17: { latitude: 12.651965, longitude: 108.025041 },
 };
 
-export const approximateLocationIds = new Set([1, 2, 3, 5, 6, 7, 8, 9, 12, 13]);
+export const approximateLocationIds = new Set([1, 3, 5, 6, 7, 8, 9, 12, 13]);
 
 export function getDirectionsDestination(
   id: number,

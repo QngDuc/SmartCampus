@@ -1,8 +1,7 @@
-import type { Coordinate } from "./campusMap";
+import { house7GpxCoordinate, type Coordinate } from "./campusMap";
 
-// Lối đi lấy từ hai tệp GPX đã ghi ngoài hiện trường (14/10/2026), giản lược còn các
-// đỉnh lệch > 3 m. Đây là dữ liệu đo thật, khác với các nhánh số hóa từ ảnh sơ đồ.
-// Hai đầu nối (ag_6 → cổng chính, ktx_12 → Nhà số 7) là đoạn thẳng ngắn, chưa khảo sát.
+// Lối đi lấy từ các GPX đã ghi ngoài hiện trường, giản lược còn các đỉnh lệch > 3 m.
+// Các đoạn nối ngắn giữa đầu GPX và nút/địa điểm gần nhất chưa được khảo sát.
 
 // Nhà Nông Lâm → cổng chính (Track_Nong_nghiep_-_cong_truoc.gpx). ag_0 là điểm bắt đầu ghi.
 export const surveyedJunctions: Record<string, Coordinate> = {
@@ -26,7 +25,59 @@ export const surveyedJunctions: Record<string, Coordinate> = {
   ktx_9: { latitude: 12.651607, longitude: 108.025699 },
   ktx_10: { latitude: 12.651802, longitude: 108.025449 },
   ktx_11: { latitude: 12.651808, longitude: 108.02527 },
-  ktx_12: { latitude: 12.652171, longitude: 108.024829 },
+  ktx_12: house7GpxCoordinate,
+  // Track_Hoi_truong_400_cho-ktxlao.gpx: Hội trường 400 chỗ → KTX Lào.
+  hall400_0: { latitude: 12.651965, longitude: 108.025041 },
+  hall400_1: { latitude: 12.651982, longitude: 108.025085 },
+  hall400_2: { latitude: 12.651787, longitude: 108.025329 },
+  hall400_3: { latitude: 12.651840, longitude: 108.025587 },
+  hall400_4: { latitude: 12.651774, longitude: 108.025714 },
+  hall400_5: { latitude: 12.651407, longitude: 108.025832 },
+  hall400_6: { latitude: 12.651159, longitude: 108.026055 },
+  hall400_7: { latitude: 12.651145, longitude: 108.026119 },
+  hall400_8: { latitude: 12.651232, longitude: 108.026270 },
+  hall400_9: { latitude: 12.650910, longitude: 108.026708 },
+  hall400_10: { latitude: 12.651142, longitude: 108.026900 },
+  hall400_11: { latitude: 12.651126, longitude: 108.026959 },
+  // Track_Ktxlao-nhanonglam.gpx: KTX Lào → Nhà Nông Lâm.
+  ktxAg_0: { latitude: 12.651107, longitude: 108.027048 },
+  ktxAg_1: { latitude: 12.651113, longitude: 108.027200 },
+  ktxAg_2: { latitude: 12.650926, longitude: 108.026884 },
+  ktxAg_3: { latitude: 12.650884, longitude: 108.026718 },
+  ktxAg_4: { latitude: 12.650912, longitude: 108.026637 },
+  ktxAg_5: { latitude: 12.651127, longitude: 108.026474 },
+  ktxAg_6: { latitude: 12.651232, longitude: 108.026295 },
+  ktxAg_7: { latitude: 12.651436, longitude: 108.026601 },
+  // Track_Nha_6_-_KTX_lao.gpx: Nhà số 6 → KTX Lào.
+  house6Ktx_0: { latitude: 12.650355, longitude: 108.025596 },
+  house6Ktx_1: { latitude: 12.650517, longitude: 108.025721 },
+  house6Ktx_2: { latitude: 12.650640, longitude: 108.025746 },
+  house6Ktx_3: { latitude: 12.650798, longitude: 108.025712 },
+  house6Ktx_4: { latitude: 12.650930, longitude: 108.025817 },
+  house6Ktx_5: { latitude: 12.651030, longitude: 108.026008 },
+  house6Ktx_6: { latitude: 12.651190, longitude: 108.026185 },
+  house6Ktx_7: { latitude: 12.651174, longitude: 108.026312 },
+  house6Ktx_8: { latitude: 12.650908, longitude: 108.026718 },
+  house6Ktx_9: { latitude: 12.650939, longitude: 108.026789 },
+  house6Ktx_10: { latitude: 12.651126, longitude: 108.026903 },
+  house6Ktx_11: { latitude: 12.651109, longitude: 108.026978 },
+  // Track_Ktx_lao_-_nha_2.gpx: Nhà số 2 → KTX Lào, simplified to turns.
+  house2Ktx_0: { latitude: 12.650850, longitude: 108.025011 },
+  house2Ktx_1: { latitude: 12.650960, longitude: 108.024991 },
+  house2Ktx_2: { latitude: 12.650968, longitude: 108.025041 },
+  house2Ktx_3: { latitude: 12.651039, longitude: 108.025063 },
+  house2Ktx_4: { latitude: 12.651014, longitude: 108.025137 },
+  house2Ktx_5: { latitude: 12.651083, longitude: 108.025178 },
+  house2Ktx_6: { latitude: 12.651040, longitude: 108.025346 },
+  house2Ktx_7: { latitude: 12.651058, longitude: 108.025492 },
+  house2Ktx_8: { latitude: 12.651211, longitude: 108.025733 },
+  house2Ktx_9: { latitude: 12.651275, longitude: 108.025929 },
+  house2Ktx_10: { latitude: 12.651142, longitude: 108.026106 },
+  house2Ktx_11: { latitude: 12.651226, longitude: 108.026238 },
+  house2Ktx_12: { latitude: 12.651193, longitude: 108.026338 },
+  house2Ktx_13: { latitude: 12.650899, longitude: 108.026717 },
+  house2Ktx_14: { latitude: 12.651151, longitude: 108.026914 },
+  house2Ktx_15: { latitude: 12.651122, longitude: 108.026986 },
 };
 
 const chain = (prefix: string, count: number): [string, string][] =>
@@ -37,4 +88,16 @@ export const surveyedLinks: [string, string][] = [
   ["ag_6", "gate"],
   ...chain("ktx", 13),
   ["ktx_12", "p7"],
+  ...chain("hall400", 12),
+  ["p7", "hall400_0"],
+  ["hall400_11", "ktx_0"],
+  ...chain("ktxAg", 8),
+  ["ktxAg_0", "ktx_0"],
+  ["ktxAg_7", "ag_0"],
+  ...chain("house6Ktx", 12),
+  ["p6", "house6Ktx_0"],
+  ["house6Ktx_11", "ktx_0"],
+  ...chain("house2Ktx", 16),
+  ["p2", "house2Ktx_0"],
+  ["house2Ktx_15", "ktx_0"],
 ];

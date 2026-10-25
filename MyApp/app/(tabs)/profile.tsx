@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ImagePicker from 'expo-image-picker';
 import { Screen } from '@/components/campus-ui';
 import { useAuth } from '@/components/auth-provider';
 
@@ -61,16 +60,12 @@ function showMessage(title: string, message: string) {
 
 export default function ProfileScreen() {
   const { user, signOut, updateProfile } = useAuth();
-  const [data, setData] = useState<Profile>(() => profileFromUser(user));
+  const data = useMemo(() => profileFromUser(user), [user]);
   const [draft, setDraft] = useState<Profile>(() => profileFromUser(user));
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const fresh = profileFromUser(user);
-    setData(fresh);
-    setDraft(fresh);
-  }, [user]);
+  // Removed useEffect that was calling setState synchronously
 
   function edit() {
     setDraft(data);
@@ -100,7 +95,6 @@ export default function ProfileScreen() {
         avatar: draft.avatar,
       });
       const next = profileFromUser(saved);
-      setData(next);
       setDraft(next);
       setEditing(false);
     } catch (error) {
@@ -110,40 +104,46 @@ export default function ProfileScreen() {
     }
   }
 
-  async function chooseAvatar() {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.2,
-        base64: true,
-      });
-      if (result.canceled) return;
-
-      const asset = result.assets[0];
-      if (!asset.base64) {
-        showMessage('Không đọc được ảnh', 'Vui lòng chọn ảnh khác và thử lại.');
-        return;
-      }
-
-      const mime = asset.mimeType === 'image/png' ? 'image/png' : 'image/jpeg';
-      const avatar = `data:${mime};base64,${asset.base64}`;
-      if (avatar.length > 1_400_000) {
-        showMessage('Ảnh quá lớn', 'Hãy chọn ảnh có dung lượng nhỏ hơn.');
-        return;
-      }
-
-      setSaving(true);
-      const saved = await updateProfile({ ...data, avatar });
-      const next = profileFromUser(saved);
-      setData(next);
-      setDraft(next);
-    } catch (error) {
-      showMessage('Không cập nhật được ảnh', error instanceof Error ? error.message : 'Vui lòng thử lại.');
-    } finally {
-      setSaving(false);
+  function chooseAvatar() {
+    if (Platform.OS !== 'web') {
+      showMessage('Không thể chọn ảnh', 'Tính năng chọn ảnh hiện chỉ khả dụng trên web.');
+      return;
     }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const avatar = typeof reader.result === 'string' ? reader.result : '';
+        if (!avatar) {
+          showMessage('Không đọc được ảnh', 'Vui lòng chọn ảnh khác và thử lại.');
+          return;
+        }
+        if (avatar.length > 1_400_000) {
+          showMessage('Ảnh quá lớn', 'Hãy chọn ảnh có dung lượng nhỏ hơn.');
+          return;
+        }
+
+        setSaving(true);
+        try {
+          const saved = await updateProfile({ ...data, avatar });
+          const next = profileFromUser(saved);
+          setDraft(next);
+        } catch (error) {
+          showMessage('Không cập nhật được ảnh', error instanceof Error ? error.message : 'Vui lòng thử lại.');
+        } finally {
+          setSaving(false);
+        }
+      };
+      reader.onerror = () => showMessage('Không đọc được ảnh', 'Vui lòng chọn ảnh khác và thử lại.');
+      reader.readAsDataURL(file);
+    };
+    input.click();
   }
 
   async function finishLogout() {
